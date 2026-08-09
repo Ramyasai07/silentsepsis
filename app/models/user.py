@@ -43,3 +43,15 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         back_populates="acknowledged_by_user",
         foreign_keys="Alert.acknowledged_by",
     )
+    confirmed_alerts: Mapped[list["Alert"]] = relationship(
+        back_populates="confirmed_by_user",
+        foreign_keys="Alert.confirmed_by",
+    )
+    dismissed_alerts: Mapped[list["Alert"]] = relationship(
+        back_populates="dismissed_by_user",
+        foreign_keys="Alert.dismissed_by",
+    )
+    resolved_alerts: Mapped[list["Alert"]] = relationship(
+        back_populates="resolved_by_user",
+        foreign_keys="Alert.resolved_by",
+    )

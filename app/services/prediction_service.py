@@ -93,6 +93,21 @@ class PredictionService:
             raise
 
         db.refresh(prediction)
+
+        # Evaluate and create an alert synchronously if prediction meets thresholds.
+        # Per design: prediction persistence should not fail if alert creation fails.
+        try:
+            from app.services.alert_service import evaluate_and_create_alert
+            import logging
+
+            try:
+                evaluate_and_create_alert(db, prediction)
+            except Exception:
+                logging.exception("Alert creation failed for prediction %s", prediction.id)
+        except Exception:
+            # If importing the alert service fails for any reason, do not break prediction flow.
+            pass
+
         return prediction
 
     def get_predictions_for_patient(
