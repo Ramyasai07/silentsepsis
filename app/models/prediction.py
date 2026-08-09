@@ -28,6 +28,12 @@ class Prediction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
         nullable=False,
     )
+    vital_reading_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("vital_readings.id", ondelete="RESTRICT"),
+        index=True,
+        nullable=False,
+    )
     model_version: Mapped[str] = mapped_column(String(80), index=True, nullable=False)
     risk_probability: Mapped[float] = mapped_column(Float, nullable=False)
     risk_level: Mapped[RiskLevel] = mapped_column(
@@ -35,6 +41,15 @@ class Prediction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
         nullable=False,
     )
+
+    @property
+    def risk_score(self) -> float:
+        return self.risk_probability
+
+    @property
+    def risk_tier(self) -> str:
+        return self.risk_level.value
+
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         index=True,
