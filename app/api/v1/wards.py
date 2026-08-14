@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.ward import WardCreate, WardOut, WardSummaryOut
 from app.services import ward_service
+from app.services.audit_service import safe_record_audit_event
 from app.services.ward_service import WardNotFoundError
 
 
@@ -27,13 +28,20 @@ def _map_ward_error(error: Exception) -> HTTPException:
     "",
     response_model=WardOut,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role("Admin"))],
 )
 def create_ward(
     payload: WardCreate,
+    current_user: User = Depends(require_role("Admin")),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
     ward = ward_service.create_ward(db, payload)
+    safe_record_audit_event(
+        db,
+        current_user,
+        action="ward_created",
+        entity="ward",
+        entity_id=ward.id,
+    )
     return ward_service.to_ward_out(ward)
 
 

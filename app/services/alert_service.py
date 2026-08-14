@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.alert import Alert, AlertStatus, AlertSeverity
 from app.models.user import User
 from app.models.patient import Patient
+from app.services.audit_service import safe_record_audit_event
 
 
 class AlertServiceError(Exception):
@@ -32,6 +33,13 @@ STATE_TRANSITIONS: dict[str, dict[str, str]] = {
     "dismiss": {"active": "dismissed", "watching": "dismissed"},
     "confirm": {"watching": "confirmed"},
     "resolve": {"confirmed": "resolved"},
+}
+
+AUDIT_ACTIONS = {
+    "acknowledge": "alert_acknowledged",
+    "confirm": "alert_confirmed",
+    "dismiss": "alert_dismissed",
+    "resolve": "alert_resolved",
 }
 
 
@@ -149,6 +157,13 @@ def _perform_transition(db: Session, alert: Alert, action: str, user: User, *, r
 
     db.commit()
     db.refresh(alert)
+    safe_record_audit_event(
+        db,
+        user,
+        action=AUDIT_ACTIONS[action],
+        entity="alert",
+        entity_id=alert.id,
+    )
     return alert
 
 

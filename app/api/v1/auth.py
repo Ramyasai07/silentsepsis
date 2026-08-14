@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import AdminCreateUser, Token, UserOut
+from app.services.audit_service import safe_record_audit_event
 from app.services import auth_service
 from app.services.auth_service import (
     BootstrapCompletedError,
@@ -91,6 +92,7 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
+    safe_record_audit_event(db, user, action="login", entity="user", entity_id=user.id)
     return Token(access_token=auth_service.create_access_token_for_user(user))
 
 
@@ -98,16 +100,23 @@ def login(
     "/users",
     response_model=UserOut,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role("Admin"))],
 )
 def create_user(
     payload: AdminCreateUser,
+    current_user: User = Depends(require_role("Admin")),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
     try:
         user = auth_service.create_user(db, payload)
     except (DuplicateEmailError, DuplicateStaffIdError, InvalidRoleError) as exc:
         raise _map_create_error(exc) from exc
+    safe_record_audit_event(
+        db,
+        current_user,
+        action="user_created",
+        entity="user",
+        entity_id=user.id,
+    )
     return auth_service.to_user_out(user)
 
 

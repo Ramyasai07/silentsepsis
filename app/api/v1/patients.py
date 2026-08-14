@@ -15,6 +15,7 @@ from app.schemas.patient import (
     PatientUpdate,
 )
 from app.services import patient_service
+from app.services.audit_service import safe_record_audit_event
 from app.services.patient_service import (
     BaselineNotFoundError,
     DuplicateBedNumberError,
@@ -44,10 +45,10 @@ def _map_patient_error(error: Exception) -> HTTPException:
     "",
     response_model=PatientOut,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role("Admin", "Physician"))],
 )
 def create_patient(
     payload: PatientCreate,
+    current_user: User = Depends(require_role("Admin", "Physician")),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
     try:
@@ -58,6 +59,13 @@ def create_patient(
         DuplicateBedNumberError,
     ) as exc:
         raise _map_patient_error(exc) from exc
+    safe_record_audit_event(
+        db,
+        current_user,
+        action="patient_created",
+        entity="patient",
+        entity_id=patient.id,
+    )
     return patient_service.to_patient_out(patient)
 
 
@@ -96,11 +104,11 @@ def read_patient(
 @router.patch(
     "/{patient_id}",
     response_model=PatientOut,
-    dependencies=[Depends(require_role("Admin", "Physician"))],
 )
 def update_patient(
     patient_id: UUID,
     payload: PatientUpdate,
+    current_user: User = Depends(require_role("Admin", "Physician")),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
     try:
@@ -112,6 +120,13 @@ def update_patient(
         DuplicateBedNumberError,
     ) as exc:
         raise _map_patient_error(exc) from exc
+    safe_record_audit_event(
+        db,
+        current_user,
+        action="patient_updated",
+        entity="patient",
+        entity_id=patient.id,
+    )
     return patient_service.to_patient_out(patient)
 
 
