@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     bootstrap_secret: str = "change-me-in-production"
     redis_url: str = "redis://redis:6379/0"
+    risk_evaluation_interval_minutes: int = 5
 
     model_config = SettingsConfigDict(
         env_file=".env",

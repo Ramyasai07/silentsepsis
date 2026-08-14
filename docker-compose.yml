@@ -1,4 +1,4 @@
-services:
+﻿services:
   api:
     build: .
     container_name: silentsepsis-api
@@ -13,6 +13,35 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/silentsepsis
       REDIS_URL: redis://redis:6379/0
       BOOTSTRAP_SECRET: change-me-in-production
+
+  worker:
+    build: .
+    container_name: silentsepsis-worker
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/silentsepsis
+      REDIS_URL: redis://redis:6379/0
+      BOOTSTRAP_SECRET: change-me-in-production
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+
+  beat:
+    build: .
+    container_name: silentsepsis-beat
+    volumes:
+      - .:/app
+      - celerybeat_data:/app/celerybeat-schedule-dir
+    depends_on:
+      - db
+      - redis
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/silentsepsis
+      REDIS_URL: redis://redis:6379/0
+      BOOTSTRAP_SECRET: change-me-in-production
+    command: celery -A app.tasks.celery_app beat --loglevel=info --schedule /app/celerybeat-schedule-dir/celerybeat-schedule
 
   db:
     image: postgres:16
@@ -34,3 +63,5 @@ services:
 
 volumes:
   postgres_data:
+  celerybeat_data:
+
