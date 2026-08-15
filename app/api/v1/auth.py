@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,8 @@ from app.services.auth_service import (
     InvalidCredentialsError,
     InvalidRoleError,
 )
+from app.core.limiter import limiter, get_login_rate_limit, get_bootstrap_rate_limit
+
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -51,11 +53,15 @@ def _map_create_error(error: Exception) -> HTTPException:
         ]
     },
 )
+@limiter.limit(get_bootstrap_rate_limit)
 def bootstrap_admin(
+    request: Request,
     payload: AdminCreateUser,
     x_bootstrap_secret: str | None = Header(default=None, include_in_schema=False),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
+    """Bootstrap the initial system administrator account."""
+
     if x_bootstrap_secret != settings.bootstrap_secret:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -75,10 +81,14 @@ def bootstrap_admin(
 
 
 @router.post("/login", response_model=Token)
+@limiter.limit(get_login_rate_limit)
 def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ) -> Token:
+    """Authenticate clinician credentials and issue an OAuth2 access token."""
+
     try:
         user = auth_service.authenticate_user(
             db,
@@ -106,6 +116,8 @@ def create_user(
     current_user: User = Depends(require_role("Admin")),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
+    """Create a new user account with a specified role."""
+
     try:
         user = auth_service.create_user(db, payload)
     except (DuplicateEmailError, DuplicateStaffIdError, InvalidRoleError) as exc:
@@ -122,4 +134,6 @@ def create_user(
 
 @router.get("/me", response_model=UserOut)
 def read_me(current_user: User = Depends(get_current_user)) -> dict[str, object]:
+    """Retrieve the profile details of the currently authenticated user."""
+
     return auth_service.to_user_out(current_user)

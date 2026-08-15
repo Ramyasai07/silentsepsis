@@ -51,7 +51,9 @@ def create_patient(
     current_user: User = Depends(require_role("Admin", "Physician")),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
+    """Register a new patient in a ward."""
     try:
+
         patient = patient_service.create_patient(db, payload)
     except (
         WardNotFoundError,
@@ -77,7 +79,9 @@ def list_patients(
     _current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[dict[str, object]]:
+    """List registered patients, optionally filtered by ward."""
     try:
+
         return patient_service.get_patients(
             db,
             ward_id=ward_id,
@@ -94,7 +98,9 @@ def read_patient(
     _current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
+    """Retrieve details of a specific patient profile by ID."""
     try:
+
         patient = patient_service.get_patient(db, patient_id)
     except PatientNotFoundError as exc:
         raise _map_patient_error(exc) from exc
@@ -111,7 +117,9 @@ def update_patient(
     current_user: User = Depends(require_role("Admin", "Physician")),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
+    """Update patient demographic or location details."""
     try:
+
         patient = patient_service.update_patient(db, patient_id, payload)
     except (
         PatientNotFoundError,
@@ -141,7 +149,9 @@ def set_patient_baseline(
     payload: PatientBaselineCreate,
     db: Session = Depends(get_db),
 ) -> PatientBaselineOut:
+    """Set or update clinical baseline values for a patient."""
     try:
+
         baseline = patient_service.set_patient_baseline(db, patient_id, payload)
     except PatientNotFoundError as exc:
         raise _map_patient_error(exc) from exc
@@ -154,7 +164,9 @@ def read_patient_baseline(
     _current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> PatientBaselineOut:
+    """Retrieve clinical baseline values for a patient."""
     try:
+
         baseline = patient_service.get_patient_baseline(db, patient_id)
     except (PatientNotFoundError, BaselineNotFoundError) as exc:
         raise _map_patient_error(exc) from exc

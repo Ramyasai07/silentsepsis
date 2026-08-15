@@ -17,7 +17,9 @@ def read_precision_recall_history(
     _current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> list[dict[str, str | int | None]]:
+    """Retrieve historical precision and recall metrics for risk predictions."""
     try:
+
         return get_precision_recall_history(db, days=days, bucket_size_days=bucket_size_days)
     except ValueError as e:
         raise HTTPException(
@@ -32,7 +34,9 @@ def read_staff_response_by_ward(
     _current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> list[dict[str, str | int]]:
+    """Retrieve staff response time analytics grouped by ward."""
     try:
+
         return get_staff_response_by_ward(db, days=days)
     except ValueError as e:
         raise HTTPException(

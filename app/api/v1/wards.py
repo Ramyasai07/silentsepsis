@@ -34,7 +34,9 @@ def create_ward(
     current_user: User = Depends(require_role("Admin")),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
+    """Create a new hospital ward configuration."""
     ward = ward_service.create_ward(db, payload)
+
     safe_record_audit_event(
         db,
         current_user,
@@ -50,7 +52,9 @@ def list_wards(
     _current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[dict[str, object]]:
+    """List all configured hospital wards."""
     return [ward_service.to_ward_out(ward) for ward in ward_service.get_wards(db)]
+
 
 
 @router.get("/{ward_id}", response_model=WardOut)
@@ -59,7 +63,9 @@ def read_ward(
     _current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
+    """Retrieve details of a specific ward by ID."""
     try:
+
         ward = ward_service.get_ward(db, ward_id)
     except WardNotFoundError as exc:
         raise _map_ward_error(exc) from exc
@@ -72,7 +78,9 @@ def read_ward_summary(
     _current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
+    """Retrieve occupancy and alert summary statistics for a ward."""
     try:
+
         return ward_service.get_summary(db, ward_id)
     except WardNotFoundError as exc:
         raise _map_ward_error(exc) from exc

@@ -38,6 +38,8 @@ def list_audit_logs(
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> list[AuditLogOut]:
+    """List audit log events with filtering."""
+
     logs = get_audit_logs(
         db,
         entity=entity,
@@ -59,7 +61,9 @@ def read_audit_log(
     audit_log_id: UUID,
     db: Session = Depends(get_db),
 ) -> AuditLogOut:
+    """Retrieve a specific audit log entry by ID."""
     try:
+
         audit_log = get_audit_log(db, audit_log_id)
     except AuditLogNotFoundError as exc:
         raise _map_audit_error(exc) from exc
