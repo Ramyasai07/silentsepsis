@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.patient import Patient, PatientStatus
 from app.models.ward import Ward
 from app.schemas.ward import WardCreate
+from app.services.analytics_service import get_ward_summary_metrics
 
 
 ACTIVE_PATIENT_STATUSES = (PatientStatus.ADMITTED, PatientStatus.TRANSFERRED)
@@ -45,17 +46,15 @@ def get_ward(db: Session, ward_id: UUID) -> Ward:
 def get_summary(db: Session, ward_id: UUID) -> dict[str, object]:
     ward = get_ward(db, ward_id)
     occupied_beds = _count_active_patients(db, ward.id)
-    patient_count = db.scalar(
-        select(func.count()).select_from(Patient).where(Patient.ward_id == ward.id)
-    )
-    return {
+    base_summary = {
         "id": ward.id,
         "name": ward.ward_name,
         "capacity": ward.capacity,
         "occupied_beds": occupied_beds,
         "available_beds": max(ward.capacity - occupied_beds, 0),
-        "patient_count": patient_count or 0,
     }
+    analytics = get_ward_summary_metrics(db, ward_id)
+    return {**base_summary, **analytics}
 
 
 def to_ward_out(ward: Ward) -> dict[str, object]:
