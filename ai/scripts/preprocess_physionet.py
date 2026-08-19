@@ -252,7 +252,7 @@ def process_patient_file(
             df[col] = df[col].map(lambda value: encode_category(value, categorical_mappings.get(col, {"missing": -1})))
 
     model_columns = numeric_columns + CATEGORICAL_COLUMNS + missing_indicator_columns
-    result = df[["patient_id", "ICULOS", *model_columns, "target"]].copy()
+    result = df[["patient_id", *model_columns, "target"]].copy()
     result = result.reset_index(drop=True)
 
     if result[model_columns].isna().any().any():
