@@ -4,3 +4,4 @@ scikit-learn
 matplotlib
 xgboost
 shap
+tensorflow==2.21.0

@@ -12,6 +12,7 @@ data/raw/*
 *.npz
 *.h5
 *.hdf5
+*.keras
 *.zip
 *.gz
 *.tar
