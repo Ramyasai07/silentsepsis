@@ -1,4 +1,5 @@
 from typing import Any
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -19,6 +20,7 @@ class Settings(BaseSettings):
     bootstrap_rate_limit: str = "3/minute"
     default_rate_limit: str = "100/minute"
     environment: str = "development"
+    enable_metrics: bool = True
 
     @field_validator("cors_allowed_origins", mode="before")
     @classmethod

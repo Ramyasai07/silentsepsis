@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
+from app.core.metrics import CELERY_TASK_FAILURE_TOTAL, CELERY_TASK_SUCCESS_TOTAL
 from app.db.session import SessionLocal
 from app.ml.rule_based_predictor import RuleBasedPredictor
 from app.models.patient import Patient
@@ -14,6 +15,8 @@ from app.services.ward_service import ACTIVE_PATIENT_STATUSES
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+_TASK_NAME = "evaluate_all_active_patients"
 
 
 @celery_app.task(
@@ -90,10 +93,7 @@ def evaluate_all_active_patients(
 
             remaining_patient_ids = [
                 str(patient_id),
-                *[
-                    str(remaining_id)
-                    for remaining_id in patient_ids[index + 1 :]
-                ],
+                *[str(remaining_id) for remaining_id in patient_ids[index + 1 :]],
             ]
 
             logger.warning(
@@ -104,7 +104,7 @@ def evaluate_all_active_patients(
 
             raise self.retry(
                 exc=exc,
-                countdown=2 ** self.request.retries,
+                countdown=2**self.request.retries,
                 kwargs={
                     "processed_patient_ids": [],
                     "patient_ids_to_evaluate": remaining_patient_ids,
@@ -136,5 +136,11 @@ def evaluate_all_active_patients(
     }
 
     logger.info("Risk evaluation summary: %s", summary)
+
+    # Wire Celery metrics at the existing return point without restructuring.
+    if errors > 0:
+        CELERY_TASK_FAILURE_TOTAL.labels(task_name=_TASK_NAME).inc(errors)
+    if predictions_created > 0:
+        CELERY_TASK_SUCCESS_TOTAL.labels(task_name=_TASK_NAME).inc(predictions_created)
 
     return summary
