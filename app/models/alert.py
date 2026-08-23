@@ -27,7 +27,10 @@ class AlertStatus(str, enum.Enum):
 class Alert(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "alerts"
     __table_args__ = (
-        Index("ix_alerts_patient_status_created_at", "patient_id", "status", "created_at"),
+        Index(
+            "ix_alerts_patient_status_created_at", "patient_id", "status", "created_at"
+        ),
+        Index("ix_alerts_created_at", "created_at"),
     )
 
     patient_id: Mapped[uuid.UUID] = mapped_column(
@@ -59,7 +62,9 @@ class Alert(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # store actual DB column as a plain string but expose a hybrid property that
     # returns an AlertStatus enum for attribute access while still allowing
     # SQL expressions to target the underlying column.
-    _status: Mapped[str] = mapped_column("status", String(32), index=True, nullable=False)
+    _status: Mapped[str] = mapped_column(
+        "status", String(32), index=True, nullable=False
+    )
 
     @hybrid_property
     def status(self) -> AlertStatus:

@@ -47,7 +47,9 @@ def create_prediction(
     db: Session = Depends(get_db),
     prediction_service: PredictionService = Depends(get_prediction_service),
 ) -> PredictionOut:
+    """Record a new risk prediction evaluation."""
     if payload.patient_id != patient_id:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Patient ID in body does not match path parameter",
@@ -74,7 +76,9 @@ def list_predictions(
     db: Session = Depends(get_db),
     prediction_service: PredictionService = Depends(get_prediction_service),
 ) -> list[PredictionOut]:
+    """List historical risk predictions for a patient."""
     try:
+
         predictions = prediction_service.get_predictions_for_patient(
             db,
             patient_id=patient_id,
@@ -93,7 +97,9 @@ def read_latest_prediction(
     db: Session = Depends(get_db),
     prediction_service: PredictionService = Depends(get_prediction_service),
 ) -> PredictionOut:
+    """Retrieve the most recent risk prediction for a patient."""
     try:
+
         prediction = prediction_service.get_latest_prediction(db, patient_id=patient_id)
         return PredictionOut.model_validate(prediction).model_dump()
     except Exception as exc:

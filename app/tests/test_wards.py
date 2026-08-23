@@ -176,7 +176,7 @@ def test_ward_summary() -> None:
     assert response.status_code == 200
     assert response.json()["occupied_beds"] == 1
     assert response.json()["available_beds"] == 1
-    assert response.json()["patient_count"] == 1
+    assert response.json()["totalPatients"] == 1
 
 
 def test_ward_not_found() -> None:

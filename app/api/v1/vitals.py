@@ -42,7 +42,9 @@ def record_vital(
     current_user: User = Depends(require_role("Admin", "Physician", "Nurse")),
     db: Session = Depends(get_db),
 ) -> VitalReadingOut:
+    """Record a single physiological vital reading for a patient."""
     try:
+
         vital = vital_service.record_vital(db, patient_id, payload, current_user.id)
     except PatientNotFoundError as exc:
         raise _map_vital_error(exc) from exc
@@ -60,7 +62,9 @@ def record_vitals_batch(
     current_user: User = Depends(require_role("Admin", "Physician", "Nurse")),
     db: Session = Depends(get_db),
 ) -> list[VitalReadingOut]:
+    """Record a batch of vital readings for multiple patients."""
     if payload.patient_id != patient_id:
+
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Path patient_id must match body patient_id",
@@ -83,7 +87,9 @@ def get_vitals_history(
     _current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[VitalReadingOut]:
+    """Retrieve historical vital readings for a patient."""
     try:
+
         return vital_service.get_vitals_history(
             db,
             patient_id,
@@ -102,7 +108,9 @@ def get_latest_vital(
     _current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> VitalReadingOut:
+    """Retrieve the most recent vital readings for a patient."""
     try:
+
         vital = vital_service.get_latest_vital(db, patient_id)
     except PatientNotFoundError as exc:
         raise _map_vital_error(exc) from exc
