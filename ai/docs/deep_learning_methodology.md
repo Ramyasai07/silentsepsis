@@ -140,18 +140,37 @@ The project-specific notes confirm the directional SHAP output shape is `(100, 1
 
 ## 9. GRU status
 
-The current AI scripts do not include a genuine GRU implementation. There are LSTM scripts and references to a “LSTM/GRU pipeline” in the sequence header, but the actual model code uses `keras.layers.LSTM(64)` consistently in the baseline and the experiment variants.
+The original deep-learning pipeline is LSTM-based. The first set of AI experiments in this repository — Experiment 2, Experiment 3, and Experiment 4 — all use the same LSTM architecture and differ in their imbalance-handling strategy rather than in recurrent architecture.
 
-There is no evidence in the repository of a completed GRU experiment tied to the saved artifacts. The honest status is therefore: no validated GRU model is present in the current deep-learning artifacts.
+A comparable GRU experiment has now been added in [ai/scripts/train_gru.py](../scripts/train_gru.py). The GRU uses the same patient-aware sequence contract as the baseline LSTM:
+- sequence length: 12
+- feature count: 76
+- same patient-level train/validation/test split
+- same train-only normalization approach
+- same class-imbalance strategy as the baseline LSTM
+- random seed: 42
+
+The GRU evaluation is saved in [ai/models/gru_evaluation.json](../models/gru_evaluation.json). The verified results are:
+- Validation ROC-AUC: 0.8065886890318261
+- Validation PR-AUC: 0.08628613480127315
+- Validation recall: 0.7343010413379615
+- Test ROC-AUC: 0.793085729771604
+- Test PR-AUC: 0.0749627870487889
+- Test recall: 0.717940414507772
+
+This gives a fair architecture comparison against the original LSTM baseline without changing the underlying sequence contract or preprocessing assumptions. The GRU is therefore a valid architecture comparison, while the original LSTM experiments remain distinct as imbalance-handling variants rather than different recurrent architectures.
+
+The repository does not contain a verified Bi-LSTM, Transformer, CNN-LSTM, or other recurrent architecture implementation unless a separate file outside the current audited pipeline is added later. Based on the current implementation, there is no verified Bi-LSTM or Transformer experiment in the active deep-learning code path.
 
 ## 10. Bottom line
 
-The repository already contains a coherent deep-learning pipeline with the following characteristics:
+The repository contains a coherent deep-learning pipeline with the following characteristics:
 - patient-aware preprocessing
 - leakage-safe sequence generation
 - 12-step ICU sequence windows
 - stable LSTM baseline
-- imbalance-handling variations (Experiments 3 and 4)
+- LSTM imbalance-handling variants (Experiments 2–4)
+- a comparable GRU architecture experiment using the same sequence contract and training setup
 - threshold and SHAP analysis on saved artifacts
 
-The raw deep-learning evidence does not show a high-performing clinically deployable model. The model has meaningful ROC-AUC but weak PR-AUC and low F1 at clinically relevant operating points. That is the accurate result of the current AI research artifacts and should be treated as the project baseline, not as a hidden or unverified success story.
+The raw deep-learning evidence shows that the original LSTM pipeline remains the baseline sequence model, while the newly added GRU is a fair architecture comparison using the same data contract, normalization, and imbalance assumptions. The GRU currently has stronger validation discrimination on the recorded metrics, with validation ROC-AUC 0.8066 and validation PR-AUC 0.0863, compared with the LSTM baseline validation ROC-AUC 0.7899 and validation PR-AUC 0.0817. However, the overall discrimination remains limited for a highly imbalanced early sepsis task, and the PR-AUC values remain modest. The current AI research artifacts therefore support a valid LSTM-versus-GRU comparison, but they do not show a clinically deployable final model.
