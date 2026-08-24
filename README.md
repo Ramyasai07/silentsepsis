@@ -1,17 +1,41 @@
-# flutter_app
+# SilentSepsis Flutter Frontend
 
-A new Flutter project.
+A Flutter-based clinical monitoring dashboard for the SilentSepsis project.
 
-## Getting Started
+## Overview
 
-This project is a starting point for a Flutter application.
+The Flutter frontend provides a desktop interface for monitoring patients, viewing sepsis risk, managing alerts, and analyzing ward-level information.
 
-A few resources to get you started if this is your first Flutter project:
+## Features
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- Patient monitoring dashboard
+- Patient details and vital history
+- Sepsis risk scores and risk levels
+- Alert management
+- Ward monitoring
+- Risk and alert analytics
+- Backend API configuration
+- Demo patient dataset for presentation
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Frontend Structure
+
+- `lib/screens/` - Application screens
+- `lib/widgets/` - Reusable UI components
+- `lib/models/` - Patient, alert, vital and risk models
+- `lib/repositories/` - Data access layer
+- `lib/services/` - API and configuration services
+- `lib/theme/` - Application styling and risk colors
+- `lib/data/` - Demo presentation data
+
+## Backend Integration
+
+The Flutter application communicates with the SilentSepsis FastAPI backend through REST APIs.
+
+The API provides patient, alert, ward, vital and prediction data.
+
+## Running the Application
+
+```bash
+flutter pub get
+flutter analyze
+flutter run -d windows
