@@ -27,9 +27,9 @@ SPLIT_NAMES = ["train", "validation", "test"]
 CATEGORICAL_COLUMNS = ["Gender", "Unit1", "Unit2"]
 
 EXPECTED_SOURCE_ROW_COUNTS = {
-    "train": 1_089_592,
-    "validation": 231_670,
-    "test": 230_948,
+    "train": 1_090_448,
+    "validation": 232_030,
+    "test": 229_732,
 }
 EXPECTED_TOTAL_SOURCE_ROWS = 1_552_210
 

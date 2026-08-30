@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 from uuid import UUID
 
 from sqlalchemy import select
@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.core.metrics import CELERY_TASK_FAILURE_TOTAL, CELERY_TASK_SUCCESS_TOTAL
 from app.db.session import SessionLocal
-from app.ml.rule_based_predictor import RuleBasedPredictor
+from app.ml.online_logistic_predictor import OnlineLogisticPredictor
+RuleBasedPredictor = OnlineLogisticPredictor
 from app.models.patient import Patient
 from app.models.vital_reading import VitalReading
 from app.services.prediction_service import PredictionService
@@ -144,3 +145,4 @@ def evaluate_all_active_patients(
         CELERY_TASK_SUCCESS_TOTAL.labels(task_name=_TASK_NAME).inc(predictions_created)
 
     return summary
+

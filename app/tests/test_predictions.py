@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+﻿from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 import pytest
@@ -242,7 +242,7 @@ def test_generate_prediction_happy_path() -> None:
 
     assert 0.0 <= prediction["risk_score"] <= 1.0
     assert prediction["risk_tier"] in {"LOW", "MODERATE", "HIGH", "CRITICAL"}
-    assert len(prediction["features"]) == 6
+    assert len(prediction["features"]) == 15
     assert prediction["patient_id"] == patient["id"]
     assert prediction["vital_reading_id"] == vital["id"]
 
@@ -325,28 +325,28 @@ def test_partial_baseline_falls_back_to_population_normals() -> None:
     }
 
     assert (
-        no_baseline_map["spo2"]["contribution"]
-        == partial_baseline_map["spo2"]["contribution"]
+        no_baseline_map["O2Sat"]["contribution"]
+        == partial_baseline_map["O2Sat"]["contribution"]
     )
     assert (
-        no_baseline_map["respiratory_rate"]["contribution"]
-        == partial_baseline_map["respiratory_rate"]["contribution"]
+        no_baseline_map["Resp"]["contribution"]
+        == partial_baseline_map["Resp"]["contribution"]
     )
     assert (
-        no_baseline_map["systolic_bp"]["contribution"]
-        == partial_baseline_map["systolic_bp"]["contribution"]
+        no_baseline_map["SBP"]["contribution"]
+        == partial_baseline_map["SBP"]["contribution"]
     )
     assert (
-        no_baseline_map["diastolic_bp"]["contribution"]
-        == partial_baseline_map["diastolic_bp"]["contribution"]
+        no_baseline_map["DBP"]["contribution"]
+        == partial_baseline_map["DBP"]["contribution"]
     )
     assert (
-        no_baseline_map["heart_rate"]["contribution"]
-        != partial_baseline_map["heart_rate"]["contribution"]
+        no_baseline_map["HR"]["contribution"]
+        != partial_baseline_map["HR"]["contribution"]
     )
     assert (
-        no_baseline_map["temperature"]["contribution"]
-        != partial_baseline_map["temperature"]["contribution"]
+        no_baseline_map["Temp"]["contribution"]
+        != partial_baseline_map["Temp"]["contribution"]
     )
 
 
@@ -404,7 +404,7 @@ def test_prediction_persistence_creates_prediction_and_features() -> None:
         feature_count = db.scalar(select(func.count()).select_from(PredictionFeature))
 
     assert prediction_count == 1
-    assert feature_count == 6
+    assert feature_count == 15
 
 
 def test_prediction_persistence_atomicity_rolls_back_on_feature_error() -> None:
@@ -654,3 +654,6 @@ def test_empty_prediction_history_returns_empty_list_and_latest_returns_404() ->
     assert history_response.status_code == 200
     assert history_response.json() == []
     assert latest_response.status_code == 404
+
+
+

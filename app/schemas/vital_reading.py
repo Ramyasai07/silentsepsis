@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+﻿from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -30,7 +30,7 @@ class VitalReadingCreate(BaseModel):
         if self.recorded_at is not None:
             recorded_at = self.recorded_at
             if recorded_at.tzinfo is None:
-                recorded_at = recorded_at.replace(tzinfo=timezone.utc)
+                recorded_at = recorded_at.astimezone().astimezone(timezone.utc)
             else:
                 recorded_at = recorded_at.astimezone(timezone.utc)
 
@@ -65,3 +65,4 @@ class VitalReadingOut(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
