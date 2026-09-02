@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutGrid, Users, CalendarClock, FlaskConical, BarChart3, ShieldCheck, ChevronDown, ListOrdered, Grid3x3, History } from 'lucide-react';
+import { AIMethodologyPanel } from './AIMethodologyPanel';
 
 const MAIN_NAV = [
   { to: '/nurse', icon: LayoutGrid, label: 'Dashboard' },
@@ -16,6 +18,8 @@ const OTHER_NAV = [
 ];
 
 export function ClinicSidebar() {
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+
   return (
     <aside className="w-[236px] shrink-0 bg-white dark:bg-pastel-cardDark border-r border-pastel-brandLight dark:border-pastel-borderDark h-screen sticky top-0 flex flex-col">
       <div className="h-16 flex items-center gap-2.5 px-5">
@@ -68,9 +72,15 @@ export function ClinicSidebar() {
         <div className="rounded-2xl bg-pastel-brandLight dark:bg-pastel-brandLightDark p-4 text-center">
           <p className="text-[12px] font-medium text-pastel-ink dark:text-pastel-inkDark mb-1">Need help?</p>
           <p className="text-[11px] text-pastel-sub dark:text-pastel-subDark mb-3">Check the ward handover guide</p>
-          <button className="w-full h-8 rounded-lg bg-pastel-brand text-white text-[12px] font-medium">Open guide</button>
+          <button
+            onClick={() => setIsHelpOpen(true)}
+            className="w-full h-8 rounded-lg bg-pastel-brand text-white text-[12px] font-medium"
+          >
+            Open guide
+          </button>
         </div>
       </div>
+      <AIMethodologyPanel open={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </aside>
   );
 }
