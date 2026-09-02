@@ -25,11 +25,15 @@ def upgrade() -> None:
     op.add_column(
         "patients", sa.Column("bed_number", sa.String(length=40), nullable=True)
     )
-    op.execute(sa.text("""
+    op.execute(
+        sa.text(
+            """
             UPDATE patients
             SET bed_number = 'UNASSIGNED-' || substr(id::text, 1, 8)
             WHERE bed_number IS NULL
-            """))
+            """
+        )
+    )
     op.alter_column("patients", "bed_number", nullable=False)
     op.create_index(
         op.f("ix_patients_ward_id_bed_number"),

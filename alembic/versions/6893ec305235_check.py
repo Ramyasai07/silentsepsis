@@ -21,7 +21,9 @@ def upgrade() -> None:
     op.add_column("users", sa.Column("staff_id", sa.String(length=80), nullable=True))
     op.create_index(op.f("ix_users_staff_id"), "users", ["staff_id"], unique=True)
 
-    op.execute(sa.text("""
+    op.execute(
+        sa.text(
+            """
             INSERT INTO roles (id, name, description)
             VALUES
                 (
@@ -40,7 +42,9 @@ def upgrade() -> None:
                     'Nurse user with clinical access.'
                 )
             ON CONFLICT (name) DO NOTHING
-            """))
+            """
+        )
+    )
 
     op.alter_column("users", "staff_id", nullable=False)
 
