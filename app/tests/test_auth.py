@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from alembic.config import Config
 from fastapi.testclient import TestClient
 from jose import jwt
 from sqlalchemy import delete
 
 from alembic import command
+from alembic.config import Config
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app

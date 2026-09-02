@@ -23,9 +23,8 @@ client = TestClient(app)
 
 @pytest.fixture(scope="session", autouse=True)
 def migrate_database() -> None:
-    from alembic.config import Config
-
     from alembic import command
+    from alembic.config import Config
 
     alembic_cfg = Config("alembic.ini")
     command.upgrade(alembic_cfg, "head")
