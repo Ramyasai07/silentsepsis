@@ -5,9 +5,8 @@ from uuid import UUID, uuid4
 import pytest
 from celery.exceptions import Retry
 from fastapi.testclient import TestClient
-from sqlalchemy import delete, select, func
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.db.session import SessionLocal
@@ -24,8 +23,9 @@ client = TestClient(app)
 
 @pytest.fixture(scope="session", autouse=True)
 def migrate_database() -> None:
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     alembic_cfg = Config("alembic.ini")
     command.upgrade(alembic_cfg, "head")
@@ -103,7 +103,9 @@ def create_ward(token: str) -> dict[str, object]:
     return response.json()
 
 
-def create_patient(token: str, ward_id: UUID, bed_number: str = "A1") -> dict[str, object]:
+def create_patient(
+    token: str, ward_id: UUID, bed_number: str = "A1"
+) -> dict[str, object]:
     response = client.post(
         "/patients",
         json={
@@ -144,15 +146,19 @@ class HighRiskPredictor(RiskPredictor):
         return PredictionResult(
             risk_score=0.95,
             risk_tier="CRITICAL",
-            feature_contributions=[FeatureContribution(feature_name="heart_rate", contribution=0.95)],
+            feature_contributions=[
+                FeatureContribution(feature_name="heart_rate", contribution=0.95)
+            ],
         )
 
 
-def test_evaluate_all_active_patients_creates_prediction_for_patient_with_vitals() -> None:
+def test_evaluate_all_active_patients_creates_prediction_for_patient_with_vitals() -> (
+    None
+):
     admin_token = bootstrap_admin()
     ward = create_ward(admin_token)
     patient = create_patient(admin_token, UUID(ward["id"]))
-    vital = create_vital(admin_token, UUID(patient["id"]))
+    create_vital(admin_token, UUID(patient["id"]))
 
     with patch("app.tasks.risk_evaluation.RuleBasedPredictor", new=HighRiskPredictor):
         result = evaluate_all_active_patients.apply().get()
@@ -163,7 +169,9 @@ def test_evaluate_all_active_patients_creates_prediction_for_patient_with_vitals
 
     with SessionLocal() as db:
         prediction_count = db.scalar(
-            select(func.count()).select_from(Prediction).where(Prediction.patient_id == UUID(patient["id"]))
+            select(func.count())
+            .select_from(Prediction)
+            .where(Prediction.patient_id == UUID(patient["id"]))
         )
         assert prediction_count == 1
 
@@ -171,7 +179,7 @@ def test_evaluate_all_active_patients_creates_prediction_for_patient_with_vitals
 def test_evaluate_all_active_patients_skips_patients_with_no_vitals() -> None:
     admin_token = bootstrap_admin()
     ward = create_ward(admin_token)
-    patient_with_no_vitals = create_patient(admin_token, UUID(ward["id"]), bed_number="A1")
+    create_patient(admin_token, UUID(ward["id"]), bed_number="A1")
     patient_with_vitals = create_patient(admin_token, UUID(ward["id"]), bed_number="A2")
     create_vital(admin_token, UUID(patient_with_vitals["id"]))
 
@@ -197,12 +205,17 @@ def test_individual_patient_failure_does_not_stop_next_patient() -> None:
     def side_effect(self, db, patient_id, vital_reading_id=None):
         if str(patient_id) == str(patient1["id"]):
             raise RuntimeError("forced business failure")
-        return original_generate(self, db, patient_id, vital_reading_id=vital_reading_id)
+        return original_generate(
+            self, db, patient_id, vital_reading_id=vital_reading_id
+        )
 
     original_generate = PredictionService.generate_prediction
-    with patch("app.tasks.risk_evaluation.RuleBasedPredictor", new=HighRiskPredictor), patch(
-        "app.tasks.risk_evaluation.PredictionService.generate_prediction",
-        new=side_effect,
+    with (
+        patch("app.tasks.risk_evaluation.RuleBasedPredictor", new=HighRiskPredictor),
+        patch(
+            "app.tasks.risk_evaluation.PredictionService.generate_prediction",
+            new=side_effect,
+        ),
     ):
         result = evaluate_all_active_patients.apply().get()
 
@@ -220,10 +233,14 @@ def test_business_failure_does_not_retry_batch() -> None:
     def raise_business_failure(self, db, patient_id, vital_reading_id=None):
         raise RuntimeError("forced business failure")
 
-    with patch("app.tasks.risk_evaluation.RuleBasedPredictor", new=HighRiskPredictor), patch(
-        "app.tasks.risk_evaluation.PredictionService.generate_prediction",
-        new=raise_business_failure,
-    ), patch.object(evaluate_all_active_patients, "retry") as mocked_retry:
+    with (
+        patch("app.tasks.risk_evaluation.RuleBasedPredictor", new=HighRiskPredictor),
+        patch(
+            "app.tasks.risk_evaluation.PredictionService.generate_prediction",
+            new=raise_business_failure,
+        ),
+        patch.object(evaluate_all_active_patients, "retry") as mocked_retry,
+    ):
         result = evaluate_all_active_patients.apply().get()
 
     assert result["patients_evaluated"] == 1
@@ -232,7 +249,9 @@ def test_business_failure_does_not_retry_batch() -> None:
     mocked_retry.assert_not_called()
 
 
-def test_evaluate_all_active_patients_handles_patient_deleted_before_evaluation() -> None:
+def test_evaluate_all_active_patients_handles_patient_deleted_before_evaluation() -> (
+    None
+):
     admin_token = bootstrap_admin()
     ward = create_ward(admin_token)
 
@@ -262,9 +281,7 @@ def test_evaluate_all_active_patients_handles_patient_deleted_before_evaluation(
     ):
         if str(patient_id) == str(patient1["id"]):
             with SessionLocal() as cleanup_db:
-                cleanup_db.execute(
-                    delete(Patient).where(Patient.id == patient_id)
-                )
+                cleanup_db.execute(delete(Patient).where(Patient.id == patient_id))
                 cleanup_db.commit()
 
         return original_generate(
@@ -274,13 +291,16 @@ def test_evaluate_all_active_patients_handles_patient_deleted_before_evaluation(
             vital_reading_id=vital_reading_id,
         )
 
-    with patch(
-        "app.tasks.risk_evaluation.RuleBasedPredictor",
-        new=HighRiskPredictor,
-    ), patch.object(
-        PredictionService,
-        "generate_prediction",
-        new=generate_with_patient_removed,
+    with (
+        patch(
+            "app.tasks.risk_evaluation.RuleBasedPredictor",
+            new=HighRiskPredictor,
+        ),
+        patch.object(
+            PredictionService,
+            "generate_prediction",
+            new=generate_with_patient_removed,
+        ),
     ):
         result = evaluate_all_active_patients.apply().get()
 
@@ -298,14 +318,18 @@ def test_transient_db_error_triggers_retry() -> None:
     def raise_operational_error(self, db, patient_id, vital_reading_id=None):
         raise OperationalError("SELECT 1", {}, Exception("transient"))
 
-    with patch("app.tasks.risk_evaluation.RuleBasedPredictor", new=HighRiskPredictor), patch(
-        "app.tasks.risk_evaluation.PredictionService.generate_prediction",
-        new=raise_operational_error,
-    ), patch.object(
-        evaluate_all_active_patients,
-        "retry",
-        side_effect=Retry("forced retry"),
-    ) as mocked_retry:
+    with (
+        patch("app.tasks.risk_evaluation.RuleBasedPredictor", new=HighRiskPredictor),
+        patch(
+            "app.tasks.risk_evaluation.PredictionService.generate_prediction",
+            new=raise_operational_error,
+        ),
+        patch.object(
+            evaluate_all_active_patients,
+            "retry",
+            side_effect=Retry("forced retry"),
+        ) as mocked_retry,
+    ):
         with pytest.raises(Retry):
             evaluate_all_active_patients.run()
 
@@ -341,17 +365,21 @@ def test_transient_db_error_retry_state_preserves_completed_work() -> None:
             vital_reading_id=vital_reading_id,
         )
 
-    with patch(
-        "app.tasks.risk_evaluation.RuleBasedPredictor",
-        new=HighRiskPredictor,
-    ), patch(
-        "app.tasks.risk_evaluation.PredictionService.generate_prediction",
-        new=fail_second_patient,
-    ), patch.object(
-        evaluate_all_active_patients,
-        "retry",
-        side_effect=Retry("forced retry"),
-    ) as mocked_retry:
+    with (
+        patch(
+            "app.tasks.risk_evaluation.RuleBasedPredictor",
+            new=HighRiskPredictor,
+        ),
+        patch(
+            "app.tasks.risk_evaluation.PredictionService.generate_prediction",
+            new=fail_second_patient,
+        ),
+        patch.object(
+            evaluate_all_active_patients,
+            "retry",
+            side_effect=Retry("forced retry"),
+        ) as mocked_retry,
+    ):
         with pytest.raises(Retry):
             evaluate_all_active_patients.run(
                 patient_ids_to_evaluate=[

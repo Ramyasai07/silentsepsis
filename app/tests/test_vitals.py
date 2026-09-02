@@ -2,11 +2,11 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import delete
 
+from alembic import command
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
@@ -15,7 +15,6 @@ from app.models.patient_baseline import PatientBaseline
 from app.models.user import User
 from app.models.vital_reading import VitalReading
 from app.models.ward import Ward
-
 
 client = TestClient(app)
 
@@ -98,7 +97,9 @@ def bootstrap_admin() -> str:
     return login("admin@silentsepsis.test", "StrongPass123")["access_token"]
 
 
-def create_user_as_admin(role_name: str, email: str, staff_id: str, admin_token: str) -> dict[str, object]:
+def create_user_as_admin(
+    role_name: str, email: str, staff_id: str, admin_token: str
+) -> dict[str, object]:
     response = client.post(
         "/auth/users",
         json=create_payload(role_name, email, staff_id),
@@ -118,7 +119,9 @@ def create_ward(token: str, name: str = "ICU", capacity: int = 2) -> dict[str, o
     return response.json()
 
 
-def create_patient(token: str, ward_id: UUID, name: str = "Test Patient", bed_number: str = "A1") -> dict[str, object]:
+def create_patient(
+    token: str, ward_id: UUID, name: str = "Test Patient", bed_number: str = "A1"
+) -> dict[str, object]:
     response = client.post(
         "/patients",
         json={
@@ -201,7 +204,10 @@ def test_batch_atomicity_rejects_all_on_invalid_reading() -> None:
 
     readings = [
         {**vital_payload(datetime.now(timezone.utc) - timedelta(minutes=3))},
-        {**vital_payload(datetime.now(timezone.utc) - timedelta(minutes=2)), "heart_rate": 500},
+        {
+            **vital_payload(datetime.now(timezone.utc) - timedelta(minutes=2)),
+            "heart_rate": 500,
+        },
     ]
     response = client.post(
         f"/patients/{patient['id']}/vitals/batch",
@@ -211,7 +217,9 @@ def test_batch_atomicity_rejects_all_on_invalid_reading() -> None:
 
     assert response.status_code == 422
 
-    history = client.get(f"/patients/{patient['id']}/vitals", headers=auth_header(admin_token))
+    history = client.get(
+        f"/patients/{patient['id']}/vitals", headers=auth_header(admin_token)
+    )
     assert history.status_code == 200
     assert history.json() == []
 
@@ -272,7 +280,9 @@ def test_empty_batch_rejected() -> None:
 
     assert response.status_code == 422
 
-    history = client.get(f"/patients/{patient['id']}/vitals", headers=auth_header(admin_token))
+    history = client.get(
+        f"/patients/{patient['id']}/vitals", headers=auth_header(admin_token)
+    )
     assert history.status_code == 200
     assert history.json() == []
 
@@ -282,7 +292,10 @@ def test_oversized_batch_rejected() -> None:
     ward = create_ward(admin_token)
     patient = create_patient(admin_token, UUID(ward["id"]))
 
-    readings = [vital_payload(datetime.now(timezone.utc) - timedelta(minutes=i)) for i in range(101)]
+    readings = [
+        vital_payload(datetime.now(timezone.utc) - timedelta(minutes=i))
+        for i in range(101)
+    ]
     response = client.post(
         f"/patients/{patient['id']}/vitals/batch",
         json={"patient_id": patient["id"], "readings": readings},
@@ -291,7 +304,9 @@ def test_oversized_batch_rejected() -> None:
 
     assert response.status_code == 422
 
-    history = client.get(f"/patients/{patient['id']}/vitals", headers=auth_header(admin_token))
+    history = client.get(
+        f"/patients/{patient['id']}/vitals", headers=auth_header(admin_token)
+    )
     assert history.status_code == 200
     assert history.json() == []
 
@@ -306,14 +321,18 @@ def test_conflicting_batch_patient_id_rejected() -> None:
         f"/patients/{patient['id']}/vitals/batch",
         json={
             "patient_id": other_patient_id,
-            "readings": [vital_payload(datetime.now(timezone.utc) - timedelta(minutes=3))],
+            "readings": [
+                vital_payload(datetime.now(timezone.utc) - timedelta(minutes=3))
+            ],
         },
         headers=auth_header(admin_token),
     )
 
     assert response.status_code == 422
 
-    history = client.get(f"/patients/{patient['id']}/vitals", headers=auth_header(admin_token))
+    history = client.get(
+        f"/patients/{patient['id']}/vitals", headers=auth_header(admin_token)
+    )
     assert history.status_code == 200
     assert history.json() == []
 
@@ -335,7 +354,9 @@ def test_history_ordering_newest_first() -> None:
     )
     assert response.status_code == 201
 
-    history = client.get(f"/patients/{patient['id']}/vitals", headers=auth_header(admin_token))
+    history = client.get(
+        f"/patients/{patient['id']}/vitals", headers=auth_header(admin_token)
+    )
     assert history.status_code == 200
     returned = history.json()
     assert len(returned) == 3
@@ -356,7 +377,11 @@ def test_time_range_filtering() -> None:
         f"/patients/{patient['id']}/vitals/batch",
         json={
             "patient_id": patient["id"],
-            "readings": [vital_payload(first), vital_payload(second), vital_payload(third)],
+            "readings": [
+                vital_payload(first),
+                vital_payload(second),
+                vital_payload(third),
+            ],
         },
         headers=auth_header(admin_token),
     )
@@ -375,7 +400,9 @@ def test_time_range_filtering() -> None:
 
 def test_nurse_can_submit_vitals() -> None:
     admin_token = bootstrap_admin()
-    nurse = create_user_as_admin("Nurse", "nurse@silentsepsis.test", "NUR-001", admin_token)
+    nurse = create_user_as_admin(
+        "Nurse", "nurse@silentsepsis.test", "NUR-001", admin_token
+    )
     nurse_token = login("nurse@silentsepsis.test", "StrongPass123")["access_token"]
     ward = create_ward(admin_token)
     patient = create_patient(admin_token, UUID(ward["id"]))
@@ -434,9 +461,13 @@ def test_latest_endpoint_returns_newest_reading() -> None:
     )
     assert response.status_code == 201
 
-    latest = client.get(f"/patients/{patient['id']}/vitals/latest", headers=auth_header(admin_token))
+    latest = client.get(
+        f"/patients/{patient['id']}/vitals/latest", headers=auth_header(admin_token)
+    )
     assert latest.status_code == 200
-    assert latest.json()["recorded_at"] == max(item["recorded_at"] for item in response.json())
+    assert latest.json()["recorded_at"] == max(
+        item["recorded_at"] for item in response.json()
+    )
 
 
 def test_query_pagination_returns_correct_subset() -> None:
@@ -464,9 +495,3 @@ def test_query_pagination_returns_correct_subset() -> None:
     )
     assert history.status_code == 200
     assert len(history.json()) == 2
-
-
-
-
-
-

@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_role
 from app.db.session import get_db
-from app.models.user import User
 from app.ml.rule_based_predictor import RuleBasedPredictor
+from app.models.user import User
 from app.schemas.prediction import PredictionCreate, PredictionOut
 from app.services.prediction_service import (
     NoVitalReadingsError,
@@ -16,7 +16,6 @@ from app.services.prediction_service import (
     VitalReadingNotFoundError,
 )
 
-
 router = APIRouter(prefix="/patients/{patient_id}/predictions", tags=["predictions"])
 
 
@@ -25,8 +24,13 @@ def get_prediction_service() -> PredictionService:
 
 
 def _map_prediction_error(error: Exception) -> HTTPException:
-    if isinstance(error, (PatientNotFoundError, VitalReadingNotFoundError, PredictionNotFoundError)):
-        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error.message)
+    if isinstance(
+        error,
+        (PatientNotFoundError, VitalReadingNotFoundError, PredictionNotFoundError),
+    ):
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=error.message
+        )
     if isinstance(error, NoVitalReadingsError):
         return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error.message)
     return HTTPException(
@@ -49,7 +53,6 @@ def create_prediction(
 ) -> PredictionOut:
     """Record a new risk prediction evaluation."""
     if payload.patient_id != patient_id:
-
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Patient ID in body does not match path parameter",
@@ -78,7 +81,6 @@ def list_predictions(
 ) -> list[PredictionOut]:
     """List historical risk predictions for a patient."""
     try:
-
         predictions = prediction_service.get_predictions_for_patient(
             db,
             patient_id=patient_id,
@@ -99,7 +101,6 @@ def read_latest_prediction(
 ) -> PredictionOut:
     """Retrieve the most recent risk prediction for a patient."""
     try:
-
         prediction = prediction_service.get_latest_prediction(db, patient_id=patient_id)
         return PredictionOut.model_validate(prediction).model_dump()
     except Exception as exc:

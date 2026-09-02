@@ -1,9 +1,9 @@
 import pytest
-from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import delete
 
+from alembic import command
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
@@ -11,7 +11,6 @@ from app.models.patient import Patient
 from app.models.patient_baseline import PatientBaseline
 from app.models.user import User
 from app.models.ward import Ward
-
 
 client = TestClient(app)
 

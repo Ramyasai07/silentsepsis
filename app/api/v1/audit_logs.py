@@ -17,7 +17,9 @@ router = APIRouter(prefix="/audit-logs", tags=["audit-logs"])
 
 def _map_audit_error(error: Exception) -> HTTPException:
     if isinstance(error, AuditLogNotFoundError):
-        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error.message)
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=error.message
+        )
     return HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail="Unexpected audit log service error",
@@ -63,7 +65,6 @@ def read_audit_log(
 ) -> AuditLogOut:
     """Retrieve a specific audit log entry by ID."""
     try:
-
         audit_log = get_audit_log(db, audit_log_id)
     except AuditLogNotFoundError as exc:
         raise _map_audit_error(exc) from exc

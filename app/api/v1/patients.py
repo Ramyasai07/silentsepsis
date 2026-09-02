@@ -24,15 +24,18 @@ from app.services.patient_service import (
     WardNotFoundError,
 )
 
-
 router = APIRouter(prefix="/patients", tags=["patients"])
 
 
 def _map_patient_error(error: Exception) -> HTTPException:
     if isinstance(error, (PatientNotFoundError, BaselineNotFoundError)):
-        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error.message)
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=error.message
+        )
     if isinstance(error, WardNotFoundError):
-        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error.message)
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=error.message
+        )
     if isinstance(error, (WardCapacityExceededError, DuplicateBedNumberError)):
         return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error.message)
     return HTTPException(
@@ -53,7 +56,6 @@ def create_patient(
 ) -> dict[str, object]:
     """Register a new patient in a ward."""
     try:
-
         patient = patient_service.create_patient(db, payload)
     except (
         WardNotFoundError,
@@ -81,7 +83,6 @@ def list_patients(
 ) -> list[dict[str, object]]:
     """List registered patients, optionally filtered by ward."""
     try:
-
         return patient_service.get_patients(
             db,
             ward_id=ward_id,
@@ -100,7 +101,6 @@ def read_patient(
 ) -> dict[str, object]:
     """Retrieve details of a specific patient profile by ID."""
     try:
-
         patient = patient_service.get_patient(db, patient_id)
     except PatientNotFoundError as exc:
         raise _map_patient_error(exc) from exc
@@ -119,7 +119,6 @@ def update_patient(
 ) -> dict[str, object]:
     """Update patient demographic or location details."""
     try:
-
         patient = patient_service.update_patient(db, patient_id, payload)
     except (
         PatientNotFoundError,
@@ -151,7 +150,6 @@ def set_patient_baseline(
 ) -> PatientBaselineOut:
     """Set or update clinical baseline values for a patient."""
     try:
-
         baseline = patient_service.set_patient_baseline(db, patient_id, payload)
     except PatientNotFoundError as exc:
         raise _map_patient_error(exc) from exc
@@ -166,7 +164,6 @@ def read_patient_baseline(
 ) -> PatientBaselineOut:
     """Retrieve clinical baseline values for a patient."""
     try:
-
         baseline = patient_service.get_patient_baseline(db, patient_id)
     except (PatientNotFoundError, BaselineNotFoundError) as exc:
         raise _map_patient_error(exc) from exc

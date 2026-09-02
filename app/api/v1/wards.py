@@ -11,13 +11,14 @@ from app.services import ward_service
 from app.services.audit_service import safe_record_audit_event
 from app.services.ward_service import WardNotFoundError
 
-
 router = APIRouter(prefix="/wards", tags=["wards"])
 
 
 def _map_ward_error(error: Exception) -> HTTPException:
     if isinstance(error, WardNotFoundError):
-        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error.message)
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=error.message
+        )
     return HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail="Unexpected ward service error",
@@ -56,7 +57,6 @@ def list_wards(
     return [ward_service.to_ward_out(ward) for ward in ward_service.get_wards(db)]
 
 
-
 @router.get("/{ward_id}", response_model=WardOut)
 def read_ward(
     ward_id: UUID,
@@ -65,7 +65,6 @@ def read_ward(
 ) -> dict[str, object]:
     """Retrieve details of a specific ward by ID."""
     try:
-
         ward = ward_service.get_ward(db, ward_id)
     except WardNotFoundError as exc:
         raise _map_ward_error(exc) from exc
@@ -80,7 +79,6 @@ def read_ward_summary(
 ) -> dict[str, object]:
     """Retrieve occupancy and alert summary statistics for a ward."""
     try:
-
         return ward_service.get_summary(db, ward_id)
     except WardNotFoundError as exc:
         raise _map_ward_error(exc) from exc

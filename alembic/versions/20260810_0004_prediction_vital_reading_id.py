@@ -8,8 +8,9 @@ Create Date: 2026-08-10 00:00:00.000000
 from typing import Sequence, Union
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision: str = "20260810_0004"
 down_revision: Union[str, Sequence[str], None] = "20260808_0003"
@@ -27,7 +28,9 @@ def upgrade() -> None:
             nullable=False,
         ),
     )
-    op.create_index(op.f("ix_predictions_vital_reading_id"), "predictions", ["vital_reading_id"])
+    op.create_index(
+        op.f("ix_predictions_vital_reading_id"), "predictions", ["vital_reading_id"]
+    )
 
 
 def downgrade() -> None:

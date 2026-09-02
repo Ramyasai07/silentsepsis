@@ -66,7 +66,9 @@ def get_patients(
     limit: int = 100,
     offset: int = 0,
 ) -> list[dict[str, object]]:
-    query = select(Patient).options(joinedload(Patient.ward)).order_by(Patient.created_at)
+    query = (
+        select(Patient).options(joinedload(Patient.ward)).order_by(Patient.created_at)
+    )
     if ward_id is not None:
         _get_ward(db, ward_id)
         query = query.where(Patient.ward_id == ward_id)
@@ -99,7 +101,9 @@ def update_patient(db: Session, patient_id: UUID, payload: PatientUpdate) -> Pat
 
     if _is_active_status(target_status):
         if payload.ward_id is not None and payload.ward_id != patient.ward_id:
-            _validate_ward_capacity(db, ward.id, ward.capacity, exclude_patient_id=patient.id)
+            _validate_ward_capacity(
+                db, ward.id, ward.capacity, exclude_patient_id=patient.id
+            )
         _validate_bed_available(
             db,
             target_ward_id,

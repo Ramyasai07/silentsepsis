@@ -2,12 +2,11 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, func, select
-from sqlalchemy.orm import Session
 
+from alembic import command
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
@@ -19,7 +18,6 @@ from app.models.prediction_feature import PredictionFeature
 from app.models.user import User
 from app.models.vital_reading import VitalReading
 from app.models.ward import Ward
-
 
 client = TestClient(app)
 
@@ -106,7 +104,9 @@ def bootstrap_admin() -> str:
     return login("admin@silentsepsis.test", "StrongPass123")["access_token"]
 
 
-def create_user_as_admin(role_name: str, email: str, staff_id: str, admin_token: str) -> dict[str, object]:
+def create_user_as_admin(
+    role_name: str, email: str, staff_id: str, admin_token: str
+) -> dict[str, object]:
     response = client.post(
         "/auth/users",
         json=create_payload(role_name, email, staff_id),
@@ -126,7 +126,9 @@ def create_ward(token: str, name: str = "ICU", capacity: int = 2) -> dict[str, o
     return response.json()
 
 
-def create_patient(token: str, ward_id: UUID, name: str = "Test Patient", bed_number: str = "A1") -> dict[str, object]:
+def create_patient(
+    token: str, ward_id: UUID, name: str = "Test Patient", bed_number: str = "A1"
+) -> dict[str, object]:
     response = client.post(
         "/patients",
         json={
@@ -158,7 +160,9 @@ def vital_payload(recorded_at: datetime | None = None) -> dict[str, object]:
     return payload
 
 
-def set_patient_baseline(token: str, patient_id: UUID, baseline: dict[str, object]) -> dict[str, object]:
+def set_patient_baseline(
+    token: str, patient_id: UUID, baseline: dict[str, object]
+) -> dict[str, object]:
     response = client.post(
         f"/patients/{patient_id}/baseline",
         json=baseline,
@@ -168,7 +172,9 @@ def set_patient_baseline(token: str, patient_id: UUID, baseline: dict[str, objec
     return response.json()
 
 
-def create_prediction(token: str, patient_id: UUID, vital_reading_id: UUID | None = None) -> dict[str, object]:
+def create_prediction(
+    token: str, patient_id: UUID, vital_reading_id: UUID | None = None
+) -> dict[str, object]:
     payload = {"patient_id": str(patient_id)}
     if vital_reading_id is not None:
         payload["vital_reading_id"] = str(vital_reading_id)
@@ -181,7 +187,9 @@ def create_prediction(token: str, patient_id: UUID, vital_reading_id: UUID | Non
     return response.json()
 
 
-def create_vital(token: str, patient_id: UUID, recorded_at: datetime | None = None) -> dict[str, object]:
+def create_vital(
+    token: str, patient_id: UUID, recorded_at: datetime | None = None
+) -> dict[str, object]:
     response = client.post(
         f"/patients/{patient_id}/vitals",
         json=vital_payload(recorded_at),
@@ -191,7 +199,9 @@ def create_vital(token: str, patient_id: UUID, recorded_at: datetime | None = No
     return response.json()
 
 
-def create_vital_batch(token: str, patient_id: UUID, readings: list[dict[str, object]]) -> list[dict[str, object]]:
+def create_vital_batch(
+    token: str, patient_id: UUID, readings: list[dict[str, object]]
+) -> list[dict[str, object]]:
     response = client.post(
         f"/patients/{patient_id}/vitals/batch",
         json={"patient_id": str(patient_id), "readings": readings},
@@ -201,7 +211,9 @@ def create_vital_batch(token: str, patient_id: UUID, readings: list[dict[str, ob
     return response.json()
 
 
-def get_prediction_history(token: str, patient_id: UUID, params: dict[str, object] | None = None) -> list[dict[str, object]]:
+def get_prediction_history(
+    token: str, patient_id: UUID, params: dict[str, object] | None = None
+) -> list[dict[str, object]]:
     response = client.get(
         f"/patients/{patient_id}/predictions",
         headers=auth_header(token),
@@ -239,7 +251,11 @@ def test_feature_contributions_are_sorted_by_absolute_value() -> None:
     admin_token = bootstrap_admin()
     ward = create_ward(admin_token)
     patient = create_patient(admin_token, UUID(ward["id"]))
-    vital = create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=2))
+    vital = create_vital(
+        admin_token,
+        UUID(patient["id"]),
+        datetime.now(timezone.utc) - timedelta(minutes=2),
+    )
 
     prediction = create_prediction(admin_token, UUID(patient["id"]), UUID(vital["id"]))
     values = [abs(item["contribution"]) for item in prediction["features"]]
@@ -251,9 +267,15 @@ def test_prediction_uses_patient_baseline() -> None:
     admin_token = bootstrap_admin()
     ward = create_ward(admin_token)
     patient = create_patient(admin_token, UUID(ward["id"]))
-    vital = create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=4))
+    vital = create_vital(
+        admin_token,
+        UUID(patient["id"]),
+        datetime.now(timezone.utc) - timedelta(minutes=4),
+    )
 
-    first_prediction = create_prediction(admin_token, UUID(patient["id"]), UUID(vital["id"]))
+    first_prediction = create_prediction(
+        admin_token, UUID(patient["id"]), UUID(vital["id"])
+    )
     baseline = {
         "baseline_hr": 70.0,
         "baseline_spo2": 99.0,
@@ -264,7 +286,9 @@ def test_prediction_uses_patient_baseline() -> None:
         "calculated_from_hours": 24,
     }
     set_patient_baseline(admin_token, UUID(patient["id"]), baseline)
-    second_prediction = create_prediction(admin_token, UUID(patient["id"]), UUID(vital["id"]))
+    second_prediction = create_prediction(
+        admin_token, UUID(patient["id"]), UUID(vital["id"])
+    )
 
     assert first_prediction["risk_score"] != second_prediction["risk_score"]
     assert first_prediction["features"] != second_prediction["features"]
@@ -274,7 +298,11 @@ def test_partial_baseline_falls_back_to_population_normals() -> None:
     admin_token = bootstrap_admin()
     ward = create_ward(admin_token)
     patient = create_patient(admin_token, UUID(ward["id"]))
-    vital = create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=3))
+    vital = create_vital(
+        admin_token,
+        UUID(patient["id"]),
+        datetime.now(timezone.utc) - timedelta(minutes=3),
+    )
 
     no_baseline = create_prediction(admin_token, UUID(patient["id"]), UUID(vital["id"]))
     baseline = {
@@ -287,24 +315,50 @@ def test_partial_baseline_falls_back_to_population_normals() -> None:
         "calculated_from_hours": 24,
     }
     set_patient_baseline(admin_token, UUID(patient["id"]), baseline)
-    partial_baseline = create_prediction(admin_token, UUID(patient["id"]), UUID(vital["id"]))
+    partial_baseline = create_prediction(
+        admin_token, UUID(patient["id"]), UUID(vital["id"])
+    )
 
     no_baseline_map = {item["feature_name"]: item for item in no_baseline["features"]}
-    partial_baseline_map = {item["feature_name"]: item for item in partial_baseline["features"]}
+    partial_baseline_map = {
+        item["feature_name"]: item for item in partial_baseline["features"]
+    }
 
-    assert no_baseline_map["spo2"]["contribution"] == partial_baseline_map["spo2"]["contribution"]
-    assert no_baseline_map["respiratory_rate"]["contribution"] == partial_baseline_map["respiratory_rate"]["contribution"]
-    assert no_baseline_map["systolic_bp"]["contribution"] == partial_baseline_map["systolic_bp"]["contribution"]
-    assert no_baseline_map["diastolic_bp"]["contribution"] == partial_baseline_map["diastolic_bp"]["contribution"]
-    assert no_baseline_map["heart_rate"]["contribution"] != partial_baseline_map["heart_rate"]["contribution"]
-    assert no_baseline_map["temperature"]["contribution"] != partial_baseline_map["temperature"]["contribution"]
+    assert (
+        no_baseline_map["spo2"]["contribution"]
+        == partial_baseline_map["spo2"]["contribution"]
+    )
+    assert (
+        no_baseline_map["respiratory_rate"]["contribution"]
+        == partial_baseline_map["respiratory_rate"]["contribution"]
+    )
+    assert (
+        no_baseline_map["systolic_bp"]["contribution"]
+        == partial_baseline_map["systolic_bp"]["contribution"]
+    )
+    assert (
+        no_baseline_map["diastolic_bp"]["contribution"]
+        == partial_baseline_map["diastolic_bp"]["contribution"]
+    )
+    assert (
+        no_baseline_map["heart_rate"]["contribution"]
+        != partial_baseline_map["heart_rate"]["contribution"]
+    )
+    assert (
+        no_baseline_map["temperature"]["contribution"]
+        != partial_baseline_map["temperature"]["contribution"]
+    )
 
 
 def test_no_baseline_fallback_uses_population_normals() -> None:
     admin_token = bootstrap_admin()
     ward = create_ward(admin_token)
     patient = create_patient(admin_token, UUID(ward["id"]))
-    vital = create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=4))
+    vital = create_vital(
+        admin_token,
+        UUID(patient["id"]),
+        datetime.now(timezone.utc) - timedelta(minutes=4),
+    )
 
     prediction = create_prediction(admin_token, UUID(patient["id"]), UUID(vital["id"]))
     assert prediction["risk_score"] >= 0.0
@@ -315,10 +369,18 @@ def test_prediction_is_deterministic_for_identical_input() -> None:
     admin_token = bootstrap_admin()
     ward = create_ward(admin_token)
     patient = create_patient(admin_token, UUID(ward["id"]))
-    vital = create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=5))
+    vital = create_vital(
+        admin_token,
+        UUID(patient["id"]),
+        datetime.now(timezone.utc) - timedelta(minutes=5),
+    )
 
-    first_prediction = create_prediction(admin_token, UUID(patient["id"]), UUID(vital["id"]))
-    second_prediction = create_prediction(admin_token, UUID(patient["id"]), UUID(vital["id"]))
+    first_prediction = create_prediction(
+        admin_token, UUID(patient["id"]), UUID(vital["id"])
+    )
+    second_prediction = create_prediction(
+        admin_token, UUID(patient["id"]), UUID(vital["id"])
+    )
 
     assert first_prediction["risk_score"] == second_prediction["risk_score"]
     assert first_prediction["risk_tier"] == second_prediction["risk_tier"]
@@ -329,7 +391,11 @@ def test_prediction_persistence_creates_prediction_and_features() -> None:
     admin_token = bootstrap_admin()
     ward = create_ward(admin_token)
     patient = create_patient(admin_token, UUID(ward["id"]))
-    vital = create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=4))
+    vital = create_vital(
+        admin_token,
+        UUID(patient["id"]),
+        datetime.now(timezone.utc) - timedelta(minutes=4),
+    )
 
     create_prediction(admin_token, UUID(patient["id"]), UUID(vital["id"]))
 
@@ -345,15 +411,23 @@ def test_prediction_persistence_atomicity_rolls_back_on_feature_error() -> None:
     admin_token = bootstrap_admin()
     ward = create_ward(admin_token)
     patient = create_patient(admin_token, UUID(ward["id"]))
-    vital = create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=3))
+    vital = create_vital(
+        admin_token,
+        UUID(patient["id"]),
+        datetime.now(timezone.utc) - timedelta(minutes=3),
+    )
 
     class BrokenPredictor(RiskPredictor):
-        def predict(self, vitals: VitalReading, baseline: PatientBaseline | None) -> PredictionResult:
+        def predict(
+            self, vitals: VitalReading, baseline: PatientBaseline | None
+        ) -> PredictionResult:
             return PredictionResult(
                 risk_score=0.5,
                 risk_tier="MODERATE",
                 feature_contributions=[
-                    FeatureContribution(feature_name="x" * 200, contribution=0.5, feature_value=1.0),
+                    FeatureContribution(
+                        feature_name="x" * 200, contribution=0.5, feature_value=1.0
+                    ),
                 ],
             )
 
@@ -401,9 +475,17 @@ def test_prediction_for_nonexistent_patient_returns_404() -> None:
 def test_mismatched_vital_reading_id_returns_404() -> None:
     admin_token = bootstrap_admin()
     ward = create_ward(admin_token)
-    patient_a = create_patient(admin_token, UUID(ward["id"]), name="Patient A", bed_number="A1")
-    patient_b = create_patient(admin_token, UUID(ward["id"]), name="Patient B", bed_number="A2")
-    vital_b = create_vital(admin_token, UUID(patient_b["id"]), datetime.now(timezone.utc) - timedelta(minutes=2))
+    patient_a = create_patient(
+        admin_token, UUID(ward["id"]), name="Patient A", bed_number="A1"
+    )
+    patient_b = create_patient(
+        admin_token, UUID(ward["id"]), name="Patient B", bed_number="A2"
+    )
+    vital_b = create_vital(
+        admin_token,
+        UUID(patient_b["id"]),
+        datetime.now(timezone.utc) - timedelta(minutes=2),
+    )
 
     response = client.post(
         f"/patients/{patient_a['id']}/predictions",
@@ -417,8 +499,16 @@ def test_prediction_history_orders_newest_first() -> None:
     admin_token = bootstrap_admin()
     ward = create_ward(admin_token)
     patient = create_patient(admin_token, UUID(ward["id"]))
-    first = create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=5))
-    second = create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=4))
+    first = create_vital(
+        admin_token,
+        UUID(patient["id"]),
+        datetime.now(timezone.utc) - timedelta(minutes=5),
+    )
+    second = create_vital(
+        admin_token,
+        UUID(patient["id"]),
+        datetime.now(timezone.utc) - timedelta(minutes=4),
+    )
 
     create_prediction(admin_token, UUID(patient["id"]), UUID(first["id"]))
     create_prediction(admin_token, UUID(patient["id"]), UUID(second["id"]))
@@ -436,8 +526,16 @@ def test_latest_prediction_endpoint_returns_newest_prediction() -> None:
     admin_token = bootstrap_admin()
     ward = create_ward(admin_token)
     patient = create_patient(admin_token, UUID(ward["id"]))
-    first = create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=5))
-    second = create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=2))
+    first = create_vital(
+        admin_token,
+        UUID(patient["id"]),
+        datetime.now(timezone.utc) - timedelta(minutes=5),
+    )
+    second = create_vital(
+        admin_token,
+        UUID(patient["id"]),
+        datetime.now(timezone.utc) - timedelta(minutes=2),
+    )
 
     create_prediction(admin_token, UUID(patient["id"]), UUID(first["id"]))
     newest = create_prediction(admin_token, UUID(patient["id"]), UUID(second["id"]))
@@ -452,14 +550,20 @@ def test_latest_prediction_endpoint_returns_newest_prediction() -> None:
 
 def test_roles_allowed_to_trigger_prediction() -> None:
     admin_token = bootstrap_admin()
-    nurse = create_user_as_admin("Nurse", "nurse@silentsepsis.test", "NUR-001", admin_token)
-    physician = create_user_as_admin("Physician", "physician@silentsepsis.test", "PHY-001", admin_token)
+    create_user_as_admin("Nurse", "nurse@silentsepsis.test", "NUR-001", admin_token)
+    create_user_as_admin(
+        "Physician", "physician@silentsepsis.test", "PHY-001", admin_token
+    )
     nurse_token = login("nurse@silentsepsis.test")["access_token"]
     physician_token = login("physician@silentsepsis.test")["access_token"]
 
     ward = create_ward(admin_token)
     patient = create_patient(admin_token, UUID(ward["id"]))
-    vital = create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=3))
+    vital = create_vital(
+        admin_token,
+        UUID(patient["id"]),
+        datetime.now(timezone.utc) - timedelta(minutes=3),
+    )
 
     for token in [admin_token, nurse_token, physician_token]:
         response = client.post(
@@ -487,9 +591,21 @@ def test_history_pagination_behaves_as_expected() -> None:
     ward = create_ward(admin_token)
     patient = create_patient(admin_token, UUID(ward["id"]))
     readings = [
-        create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=5)),
-        create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=4)),
-        create_vital(admin_token, UUID(patient["id"]), datetime.now(timezone.utc) - timedelta(minutes=3)),
+        create_vital(
+            admin_token,
+            UUID(patient["id"]),
+            datetime.now(timezone.utc) - timedelta(minutes=5),
+        ),
+        create_vital(
+            admin_token,
+            UUID(patient["id"]),
+            datetime.now(timezone.utc) - timedelta(minutes=4),
+        ),
+        create_vital(
+            admin_token,
+            UUID(patient["id"]),
+            datetime.now(timezone.utc) - timedelta(minutes=3),
+        ),
     ]
 
     for reading in readings:

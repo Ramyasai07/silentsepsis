@@ -12,8 +12,12 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "users"
 
     full_name: Mapped[str] = mapped_column(String(160), nullable=False)
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
-    staff_id: Mapped[str] = mapped_column(String(80), unique=True, index=True, nullable=False)
+    email: Mapped[str] = mapped_column(
+        String(255), unique=True, index=True, nullable=False
+    )
+    staff_id: Mapped[str] = mapped_column(
+        String(80), unique=True, index=True, nullable=False
+    )
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     role_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

@@ -6,11 +6,10 @@ Revises: 20260810_0004
 Create Date: 2026-08-09 00:00:00.000000
 """
 
-
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
 
 revision = "20260809_0005"
 down_revision = "20260810_0004"
@@ -29,16 +28,20 @@ def upgrade() -> None:
     try:
         rows = bind.execute(
             sa.text(
-                "SELECT enumlabel FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = :t"
+                "SELECT enumlabel FROM pg_enum JOIN pg_type"
+                " ON pg_enum.enumtypid = pg_type.oid"
+                " WHERE pg_type.typname = :t"
             ),
             {"t": "alert_status"},
         ).fetchall()
         existing_labels = {r[0] for r in rows}
     except Exception:
-        # If we cannot query pg_enum (type may not exist), fall back to empty set to attempt adds.
+        # If we cannot query pg_enum (type may not exist),
+        # fall back to empty set to attempt adds.
         existing_labels = set()
 
-    # Add only the missing labels, using autocommit so Postgres commits the new enum value immediately
+    # Add only the missing labels, using autocommit so Postgres commits
+    # the new enum value immediately
     missing = target_labels - existing_labels
     for label in sorted(missing):
         # Use autocommit_block so ALTER TYPE runs outside the migration transaction
@@ -49,7 +52,9 @@ def upgrade() -> None:
     try:
         rows = bind.execute(
             sa.text(
-                "SELECT enumlabel FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = :t"
+                "SELECT enumlabel FROM pg_enum JOIN pg_type"
+                " ON pg_enum.enumtypid = pg_type.oid"
+                " WHERE pg_type.typname = :t"
             ),
             {"t": "alert_status"},
         ).fetchall()
@@ -61,7 +66,9 @@ def upgrade() -> None:
     required_for_updates = {"active", "watching", "resolved", "dismissed"}
     if not required_for_updates.issubset(existing_labels):
         missing_after = required_for_updates - existing_labels
-        raise RuntimeError(f"Missing enum labels required for migration UPDATEs: {missing_after}")
+        raise RuntimeError(
+            f"Missing enum labels required for migration UPDATEs: {missing_after}"
+        )
 
     # Map legacy values to new lowercase values where applicable
     op.execute("UPDATE alerts SET status = 'active' WHERE status = 'NEW'")
@@ -122,9 +129,15 @@ def upgrade() -> None:
     )
 
     # Add indexes for newly added FK columns
-    op.create_index(op.f("ix_alerts_confirmed_by"), "alerts", ["confirmed_by"], unique=False)
-    op.create_index(op.f("ix_alerts_dismissed_by"), "alerts", ["dismissed_by"], unique=False)
-    op.create_index(op.f("ix_alerts_resolved_by"), "alerts", ["resolved_by"], unique=False)
+    op.create_index(
+        op.f("ix_alerts_confirmed_by"), "alerts", ["confirmed_by"], unique=False
+    )
+    op.create_index(
+        op.f("ix_alerts_dismissed_by"), "alerts", ["dismissed_by"], unique=False
+    )
+    op.create_index(
+        op.f("ix_alerts_resolved_by"), "alerts", ["resolved_by"], unique=False
+    )
 
 
 def downgrade() -> None:
@@ -133,9 +146,15 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_alerts_dismissed_by"), table_name="alerts")
     op.drop_index(op.f("ix_alerts_confirmed_by"), table_name="alerts")
 
-    op.drop_constraint(op.f("fk_alerts_resolved_by_users"), "alerts", type_="foreignkey")
-    op.drop_constraint(op.f("fk_alerts_dismissed_by_users"), "alerts", type_="foreignkey")
-    op.drop_constraint(op.f("fk_alerts_confirmed_by_users"), "alerts", type_="foreignkey")
+    op.drop_constraint(
+        op.f("fk_alerts_resolved_by_users"), "alerts", type_="foreignkey"
+    )
+    op.drop_constraint(
+        op.f("fk_alerts_dismissed_by_users"), "alerts", type_="foreignkey"
+    )
+    op.drop_constraint(
+        op.f("fk_alerts_confirmed_by_users"), "alerts", type_="foreignkey"
+    )
 
     op.drop_column("alerts", "resolved_by")
     op.drop_column("alerts", "dismissed_reason")
@@ -144,4 +163,5 @@ def downgrade() -> None:
     op.drop_column("alerts", "confirmed_by")
     op.drop_column("alerts", "confirmed_at")
 
-    # Note: enum values cannot be cleanly removed in Postgres; leave added values in type.
+    # Note: enum values cannot be cleanly removed in Postgres;
+    # leave added values in type.

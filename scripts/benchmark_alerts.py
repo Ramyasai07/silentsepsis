@@ -104,10 +104,9 @@ def seed(raw):
     existing_patients = cur.fetchone()[0]
 
     if existing_patients >= SEED_PATIENTS:
-        print(f"  Already have {existing_patients} benchmark patients" f" — reusing.")
+        print(f"  Already have {existing_patients} benchmark patients — reusing.")
         cur.execute(
-            "SELECT id FROM patients WHERE hospital_patient_id LIKE 'BM-%%'"
-            " LIMIT %s",
+            "SELECT id FROM patients WHERE hospital_patient_id LIKE 'BM-%%' LIMIT %s",
             (SEED_PATIENTS,),
         )
         patient_ids = [r[0] for r in cur.fetchall()]
@@ -138,8 +137,7 @@ def seed(raw):
         raw.commit()
         # Re-fetch actual IDs (ON CONFLICT may have been a no-op for some)
         cur.execute(
-            "SELECT id FROM patients WHERE hospital_patient_id LIKE 'BM-%%'"
-            " LIMIT %s",
+            "SELECT id FROM patients WHERE hospital_patient_id LIKE 'BM-%%' LIMIT %s",
             (SEED_PATIENTS,),
         )
         patient_ids = [r[0] for r in cur.fetchall()]
@@ -153,7 +151,7 @@ def seed(raw):
     existing_vitals = cur.fetchone()[0]
 
     if existing_vitals >= ALERTS_TARGET:
-        print(f"  Already have {existing_vitals} benchmark vitals" f" — reusing.")
+        print(f"  Already have {existing_vitals} benchmark vitals — reusing.")
         cur.execute(
             """
             SELECT vr.id, vr.patient_id FROM vital_readings vr
@@ -217,7 +215,7 @@ def seed(raw):
     existing_preds = cur.fetchone()[0]
 
     if existing_preds >= len(vital_pairs):
-        print(f"  Already have {existing_preds} benchmark predictions" f" — reusing.")
+        print(f"  Already have {existing_preds} benchmark predictions — reusing.")
         cur.execute(
             """
             SELECT pr.id, pr.patient_id FROM predictions pr
@@ -278,7 +276,7 @@ def seed(raw):
     existing_alerts = cur.fetchone()[0]
 
     if existing_alerts >= ALERTS_TARGET:
-        print(f"  Already have {existing_alerts} benchmark alerts" f" — reusing.")
+        print(f"  Already have {existing_alerts} benchmark alerts — reusing.")
     else:
         print(f"  Seeding {len(pred_pairs)} alerts…")
         statuses = [
