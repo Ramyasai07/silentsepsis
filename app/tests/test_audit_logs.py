@@ -2,11 +2,11 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import pytest
-from alembic import command
-from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 
+from alembic import command
+from alembic.config import Config
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
@@ -128,7 +128,9 @@ def create_ward(token: str, capacity: int = 2) -> dict[str, object]:
     return response.json()
 
 
-def create_patient(token: str, ward_id: UUID, bed_number: str = "A1") -> dict[str, object]:
+def create_patient(
+    token: str, ward_id: UUID, bed_number: str = "A1"
+) -> dict[str, object]:
     response = client.post(
         "/patients",
         json={

@@ -10,7 +10,9 @@ from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 class PredictionFeature(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "prediction_features"
     __table_args__ = (
-        Index("ix_prediction_features_prediction_feature", "prediction_id", "feature_name"),
+        Index(
+            "ix_prediction_features_prediction_feature", "prediction_id", "feature_name"
+        ),
     )
 
     prediction_id: Mapped[uuid.UUID] = mapped_column(

@@ -8,9 +8,9 @@ Create Date: 2026-08-08 00:00:00.000000
 from typing import Sequence, Union
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
 
 revision: str = "20260808_0003"
 down_revision: Union[str, Sequence[str], None] = "20260807_0002"

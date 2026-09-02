@@ -8,7 +8,6 @@ from app.models.ward import Ward
 from app.schemas.ward import WardCreate
 from app.services.analytics_service import get_ward_summary_metrics
 
-
 ACTIVE_PATIENT_STATUSES = (PatientStatus.ADMITTED, PatientStatus.TRANSFERRED)
 
 

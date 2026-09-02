@@ -30,5 +30,6 @@ class PredictionResult:
 class RiskPredictor(ABC):
     @abstractmethod
     def predict(self, vitals, baseline) -> PredictionResult:
-        """Return a deterministic risk prediction for the provided vitals and optional baseline."""
+        """Return a deterministic risk prediction for the provided vitals
+        and optional baseline."""
         raise NotImplementedError

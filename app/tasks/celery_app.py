@@ -25,4 +25,6 @@ celery_app.conf.update(
 )
 
 # Import tasks to ensure they are registered with Celery.
-from app.tasks import risk_evaluation  # noqa: F401
+# Must be after celery_app is created to avoid a circular import
+# (risk_evaluation imports celery_app from this module).
+from app.tasks import risk_evaluation  # noqa: E402, F401

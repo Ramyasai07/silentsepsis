@@ -6,22 +6,23 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, require_role
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.alert import AlertOut, AlertListItem, AlertDismissRequest
+from app.schemas.alert import AlertDismissRequest, AlertListItem, AlertOut
 from app.schemas.feedback import FeedbackCreate, FeedbackOut
 from app.services.alert_service import (
-    AlertServiceError,
     AlertNotFoundError,
-    InvalidTransitionError,
     DismissReasonMissingError,
-    get_alerts,
-    get_alert,
+    InvalidTransitionError,
     acknowledge_alert,
     confirm_alert,
     dismiss_alert,
+    get_alert,
+    get_alerts,
     resolve_alert,
 )
 from app.services.feedback_service import (
     AlertNotFoundError as FeedbackAlertNotFoundError,
+)
+from app.services.feedback_service import (
     get_feedback_for_alert,
     submit_feedback,
 )
@@ -33,10 +34,15 @@ def _map_error(exc: Exception) -> HTTPException:
     if isinstance(exc, AlertNotFoundError):
         return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message)
     if isinstance(exc, DismissReasonMissingError):
-        return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.message)
+        return HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.message
+        )
     if isinstance(exc, InvalidTransitionError):
         return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message)
-    return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected alert service error")
+    return HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Unexpected alert service error",
+    )
 
 
 def _map_feedback_error(exc: Exception) -> HTTPException:
@@ -59,12 +65,23 @@ def list_alerts(
     db: Session = Depends(get_db),
 ):
     """Retrieve alerts filtered by status, patient, or ward."""
-    alerts = get_alerts(db, ward_id=ward_id, patient_id=patient_id, status=status, limit=limit, offset=offset)
+    alerts = get_alerts(
+        db,
+        ward_id=ward_id,
+        patient_id=patient_id,
+        status=status,
+        limit=limit,
+        offset=offset,
+    )
     return [AlertListItem.model_validate(a).model_dump() for a in alerts]
 
 
 @router.get("/{alert_id}", response_model=AlertOut)
-def read_alert(alert_id: UUID, _current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> AlertOut:
+def read_alert(
+    alert_id: UUID,
+    _current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AlertOut:
     """Retrieve details of a specific alert by ID."""
     try:
         alert = get_alert(db, alert_id)
@@ -73,8 +90,16 @@ def read_alert(alert_id: UUID, _current_user: User = Depends(get_current_user), 
         raise _map_error(exc) from exc
 
 
-@router.patch("/{alert_id}/acknowledge", dependencies=[Depends(require_role("Admin", "Physician", "Nurse"))], response_model=AlertOut)
-def patch_acknowledge(alert_id: UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> AlertOut:
+@router.patch(
+    "/{alert_id}/acknowledge",
+    dependencies=[Depends(require_role("Admin", "Physician", "Nurse"))],
+    response_model=AlertOut,
+)
+def patch_acknowledge(
+    alert_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AlertOut:
     """Transition alert status to ACKNOWLEDGED."""
     try:
         alert = acknowledge_alert(db, alert_id, current_user)
@@ -83,8 +108,16 @@ def patch_acknowledge(alert_id: UUID, current_user: User = Depends(get_current_u
         raise _map_error(exc) from exc
 
 
-@router.patch("/{alert_id}/confirm", dependencies=[Depends(require_role("Admin", "Physician"))], response_model=AlertOut)
-def patch_confirm(alert_id: UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> AlertOut:
+@router.patch(
+    "/{alert_id}/confirm",
+    dependencies=[Depends(require_role("Admin", "Physician"))],
+    response_model=AlertOut,
+)
+def patch_confirm(
+    alert_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AlertOut:
     """Transition alert status to CONFIRMED."""
     try:
         alert = confirm_alert(db, alert_id, current_user)
@@ -93,8 +126,17 @@ def patch_confirm(alert_id: UUID, current_user: User = Depends(get_current_user)
         raise _map_error(exc) from exc
 
 
-@router.patch("/{alert_id}/dismiss", dependencies=[Depends(require_role("Admin", "Physician", "Nurse"))], response_model=AlertOut)
-def patch_dismiss(alert_id: UUID, payload: AlertDismissRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> AlertOut:
+@router.patch(
+    "/{alert_id}/dismiss",
+    dependencies=[Depends(require_role("Admin", "Physician", "Nurse"))],
+    response_model=AlertOut,
+)
+def patch_dismiss(
+    alert_id: UUID,
+    payload: AlertDismissRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AlertOut:
     """Dismiss an alert with a reason and optional comment."""
     try:
         alert = dismiss_alert(db, alert_id, current_user, payload.reason)
@@ -103,8 +145,16 @@ def patch_dismiss(alert_id: UUID, payload: AlertDismissRequest, current_user: Us
         raise _map_error(exc) from exc
 
 
-@router.patch("/{alert_id}/resolve", dependencies=[Depends(require_role("Admin", "Physician"))], response_model=AlertOut)
-def patch_resolve(alert_id: UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> AlertOut:
+@router.patch(
+    "/{alert_id}/resolve",
+    dependencies=[Depends(require_role("Admin", "Physician"))],
+    response_model=AlertOut,
+)
+def patch_resolve(
+    alert_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AlertOut:
     """Resolve an alert after clinical action."""
     try:
         alert = resolve_alert(db, alert_id, current_user)
@@ -127,7 +177,6 @@ def create_alert_feedback(
 ) -> FeedbackOut:
     """Submit clinician feedback on a specific alert."""
     try:
-
         feedback = submit_feedback(db, alert_id, current_user, payload)
     except Exception as exc:
         raise _map_feedback_error(exc) from exc
@@ -144,7 +193,6 @@ def list_alert_feedback(
 ) -> list[FeedbackOut]:
     """List all feedback submissions for a specific alert."""
     try:
-
         feedback = get_feedback_for_alert(
             db,
             alert_id,

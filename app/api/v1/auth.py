@@ -1,14 +1,15 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, status, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_role
 from app.core.config import settings
+from app.core.limiter import get_bootstrap_rate_limit, get_login_rate_limit, limiter
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import AdminCreateUser, Token, UserOut
-from app.services.audit_service import safe_record_audit_event
 from app.services import auth_service
+from app.services.audit_service import safe_record_audit_event
 from app.services.auth_service import (
     BootstrapCompletedError,
     DuplicateEmailError,
@@ -16,22 +17,27 @@ from app.services.auth_service import (
     InvalidCredentialsError,
     InvalidRoleError,
 )
-from app.core.limiter import limiter, get_login_rate_limit, get_bootstrap_rate_limit
-
-
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _map_create_error(error: Exception) -> HTTPException:
     if isinstance(error, DuplicateEmailError):
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error.message)
+        return HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=error.message
+        )
     if isinstance(error, DuplicateStaffIdError):
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error.message)
+        return HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=error.message
+        )
     if isinstance(error, InvalidRoleError):
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error.message)
+        return HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=error.message
+        )
     if isinstance(error, BootstrapCompletedError):
-        return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=error.message)
+        return HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=error.message
+        )
     return HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail="Unexpected authentication error",

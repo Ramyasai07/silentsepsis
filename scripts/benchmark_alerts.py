@@ -104,10 +104,9 @@ def seed(raw):
     existing_patients = cur.fetchone()[0]
 
     if existing_patients >= SEED_PATIENTS:
-        print(f"  Already have {existing_patients} benchmark patients" f" — reusing.")
+        print(f"  Already have {existing_patients} benchmark patients — reusing.")
         cur.execute(
-            "SELECT id FROM patients WHERE hospital_patient_id LIKE 'BM-%%'"
-            " LIMIT %s",
+            "SELECT id FROM patients WHERE hospital_patient_id LIKE 'BM-%%' LIMIT %s",
             (SEED_PATIENTS,),
         )
         patient_ids = [r[0] for r in cur.fetchall()]
@@ -138,8 +137,7 @@ def seed(raw):
         raw.commit()
         # Re-fetch actual IDs (ON CONFLICT may have been a no-op for some)
         cur.execute(
-            "SELECT id FROM patients WHERE hospital_patient_id LIKE 'BM-%%'"
-            " LIMIT %s",
+            "SELECT id FROM patients WHERE hospital_patient_id LIKE 'BM-%%' LIMIT %s",
             (SEED_PATIENTS,),
         )
         patient_ids = [r[0] for r in cur.fetchall()]
@@ -153,7 +151,7 @@ def seed(raw):
     existing_vitals = cur.fetchone()[0]
 
     if existing_vitals >= ALERTS_TARGET:
-        print(f"  Already have {existing_vitals} benchmark vitals" f" — reusing.")
+        print(f"  Already have {existing_vitals} benchmark vitals — reusing.")
         cur.execute(
             """
             SELECT vr.id, vr.patient_id FROM vital_readings vr
@@ -209,15 +207,17 @@ def seed(raw):
         vital_pairs = cur.fetchall()
 
     # ── predictions ──────────────────────────────────────────────────────────
-    cur.execute("""
+    cur.execute(
+        """
         SELECT COUNT(*) FROM predictions pr
         JOIN patients p ON p.id = pr.patient_id
         WHERE p.hospital_patient_id LIKE 'BM-%%'
-        """)
+        """
+    )
     existing_preds = cur.fetchone()[0]
 
     if existing_preds >= len(vital_pairs):
-        print(f"  Already have {existing_preds} benchmark predictions" f" — reusing.")
+        print(f"  Already have {existing_preds} benchmark predictions — reusing.")
         cur.execute(
             """
             SELECT pr.id, pr.patient_id FROM predictions pr
@@ -270,15 +270,17 @@ def seed(raw):
         pred_pairs = cur.fetchall()
 
     # ── alerts ───────────────────────────────────────────────────────────────
-    cur.execute("""
+    cur.execute(
+        """
         SELECT COUNT(*) FROM alerts al
         JOIN patients p ON p.id = al.patient_id
         WHERE p.hospital_patient_id LIKE 'BM-%%'
-        """)
+        """
+    )
     existing_alerts = cur.fetchone()[0]
 
     if existing_alerts >= ALERTS_TARGET:
-        print(f"  Already have {existing_alerts} benchmark alerts" f" — reusing.")
+        print(f"  Already have {existing_alerts} benchmark alerts — reusing.")
     else:
         print(f"  Seeding {len(pred_pairs)} alerts…")
         statuses = [
@@ -316,11 +318,13 @@ def seed(raw):
         )
         raw.commit()
 
-    cur.execute("""
+    cur.execute(
+        """
         SELECT COUNT(*) FROM alerts al
         JOIN patients p ON p.id = al.patient_id
         WHERE p.hospital_patient_id LIKE 'BM-%%'
-        """)
+        """
+    )
     final_count = cur.fetchone()[0]
     print(f"  Final benchmark alert row count: {final_count}")
     cur.close()
@@ -346,24 +350,30 @@ def explain(raw, label: str) -> str:
 def cleanup(raw):
     cur = raw.cursor()
     print("\n  Cleaning up benchmark seed rows (BM- prefix only)…")
-    cur.execute("""
+    cur.execute(
+        """
         DELETE FROM alerts
         WHERE patient_id IN (
             SELECT id FROM patients WHERE hospital_patient_id LIKE 'BM-%%'
         )
-        """)
-    cur.execute("""
+        """
+    )
+    cur.execute(
+        """
         DELETE FROM predictions
         WHERE patient_id IN (
             SELECT id FROM patients WHERE hospital_patient_id LIKE 'BM-%%'
         )
-        """)
-    cur.execute("""
+        """
+    )
+    cur.execute(
+        """
         DELETE FROM vital_readings
         WHERE patient_id IN (
             SELECT id FROM patients WHERE hospital_patient_id LIKE 'BM-%%'
         )
-        """)
+        """
+    )
     cur.execute("DELETE FROM patients WHERE hospital_patient_id LIKE 'BM-%%'")
     cur.execute("DELETE FROM users WHERE email = 'bench@bm.test'")
     cur.execute("DELETE FROM wards WHERE ward_name = 'BenchmarkWard'")

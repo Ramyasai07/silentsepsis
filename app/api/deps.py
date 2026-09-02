@@ -15,7 +15,6 @@ from app.core.security import (
 from app.db.session import get_db
 from app.models.user import User
 
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
@@ -42,9 +41,7 @@ def get_current_user(
         raise credentials_error from exc
 
     user = db.scalar(
-        select(User)
-        .options(joinedload(User.role))
-        .where(User.id == user_id)
+        select(User).options(joinedload(User.role)).where(User.id == user_id)
     )
     if user is None:
         raise credentials_error
