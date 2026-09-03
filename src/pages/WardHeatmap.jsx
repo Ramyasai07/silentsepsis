@@ -1,42 +1,138 @@
 import { useState, useRef } from 'react';
-import { ZoomIn, ZoomOut, Search } from 'lucide-react';
+import { ZoomIn, ZoomOut, Search, MapPin } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ClinicSidebar } from '../components/clinic/ClinicSidebar';
 import { ClinicTopbar } from '../components/clinic/ClinicTopbar';
 import { PatientDetailDrawer } from '../components/clinic/PatientDetailDrawer';
 import { wardFloors } from '../data/wardRooms';
 
-const STATUS_COLOR = { critical: '#E0607E', warning: '#FDB022', stable: '#20C5A0', empty: '#DDE3E3' };
+// Design decision: reduce alarm fatigue. Only critical tiles are visually loud;
+// stable or watching patients should recede so the board does not compete
+// for attention. Visual weight is therefore applied by risk thresholds below.
+const RISK_CRITICAL = 80; // >= this is critical (loud)
+const RISK_WATCHING = 50; // 50-79 is watching (calmer tint + border)
+
+const STATUS_COLOR = { critical: '#E24B4A', warning: '#EF9F27', watchingBorder: '#EF9F27', watchingFill: '#FAEEDA', watchingText: '#854F0B', stable: '#DDE3E3', empty: '#DDE3E3' };
 const STATUS_LABEL = { critical: 'Critical', warning: 'Watching', stable: 'Stable', empty: 'Unoccupied' };
+
+const PLAN_WIDTH = 720; // visual floor plan size used for pan constraints
+const PLAN_HEIGHT = 320;
+
+function hexToRgba(hex, alpha = 1) {
+  const h = hex.replace('#', '');
+  const bigint = parseInt(h, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 function RoomTile({ entry, onSelect, dim }) {
   const status = entry.patient ? entry.patient.status : 'empty';
   const [hover, setHover] = useState(false);
 
+  const initials = entry.patient
+    ? entry.patient.name
+        .split(' ')
+        .map((s) => s[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
+    : null;
+
+  // Determine visual tier from risk value (not just status string):
+  // - risk >= RISK_CRITICAL => critical (loud)
+  // - RISK_WATCHING <= risk < RISK_CRITICAL => watching (calm tint + border)
+  // - risk < RISK_WATCHING => stable (resembles empty)
+  const risk = entry.patient ? Number(entry.patient.risk ?? 0) : null;
+  const tier = entry.patient ? (risk >= RISK_CRITICAL ? 'critical' : risk >= RISK_WATCHING ? 'watching' : 'stable') : 'empty';
+
+  // style building per tier
+  const commonStyle = { opacity: dim ? 0.22 : 1 };
+
+  const criticalStyle = {
+    background: STATUS_COLOR.critical,
+    color: '#FFFFFF',
+    border: 'none',
+    boxShadow: '0 6px 18px rgba(226,75,74,0.12)',
+    animation: 'pulse-ring 1.8s infinite',
+  };
+
+  const watchingStyle = {
+    background: STATUS_COLOR.watchingFill,
+    color: STATUS_COLOR.watchingText,
+    borderColor: STATUS_COLOR.watchingBorder,
+    borderWidth: '1.5px',
+  };
+
+  const stableStyle = {
+    background: 'transparent',
+    color: undefined,
+    borderWidth: '1.5px',
+  };
+
   return (
     <div
-      className="relative"
+      className="relative flex items-center justify-center"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <button
+      {/* inject keyframes for pulse ring locally */}
+      <style>{`
+        @keyframes pulse-ring { 0%, 100% { box-shadow: 0 0 0 0 rgba(226,75,74,0.5); } 50% { box-shadow: 0 0 0 8px rgba(226,75,74,0); } }
+      `}</style>
+
+      <motion.button
         onClick={() => entry.patient && onSelect(entry.patient.id)}
         disabled={!entry.patient}
-        className={`h-16 w-full rounded-lg flex flex-col items-center justify-center text-white text-[11px] font-semibold transition-transform ${
-          entry.patient ? 'cursor-pointer hover:scale-105' : 'cursor-default'
-        } ${status === 'critical' ? 'animate-pulse' : ''}`}
-        style={{ background: STATUS_COLOR[status], opacity: dim ? 0.25 : 1 }}
+        layout
+        whileHover={entry.patient ? { translateY: -6, scale: 1.03 } : {}}
+        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        className={`h-16 w-28 rounded-xl flex flex-col items-center justify-center text-[11.5px] font-semibold transition-colors duration-300 border border-pastel-brandLight dark:border-pastel-borderDark ${
+          entry.patient ? 'cursor-pointer' : 'cursor-default'
+        }`}
+        style={{
+          ...(tier === 'critical' ? criticalStyle : {}),
+          ...(tier === 'watching' ? watchingStyle : {}),
+          ...(tier === 'stable' || tier === 'empty' ? { background: 'transparent' } : {}),
+          ...(tier === 'stable' || tier === 'empty' ? { borderColor: undefined } : {}),
+          ...(tier === 'stable' ? { borderColor: undefined } : {}),
+          boxShadow: tier === 'stable' ? 'inset 0 2px 8px rgba(11,13,14,0.04)' : undefined,
+          ...(tier === 'stable' || tier === 'empty' ? { borderWidth: '1.5px' } : {}),
+          ...(tier === 'stable' || tier === 'empty' ? { borderColor: undefined } : {}),
+          ...commonStyle,
+        }}
       >
-        {entry.room}
-      </button>
+        {entry.patient ? (
+          <>
+            <div className={`text-[13px] font-bold leading-none ${tier === 'critical' ? 'text-white' : 'text-pastel-sub dark:text-pastel-subDark'}`}>
+              {initials}
+            </div>
+            <div className={`text-[11px] mt-0.5 ${tier === 'critical' ? 'text-white' : 'text-pastel-sub dark:text-pastel-subDark'}`}>
+              {entry.room} · risk {risk}
+            </div>
+          </>
+        ) : (
+          <div className="text-[11px] text-pastel-sub dark:text-pastel-subDark">{entry.room}</div>
+        )}
+      </motion.button>
 
-      {hover && entry.patient && !dim && (
-        <div className="absolute z-20 top-full mt-1 left-1/2 -translate-x-1/2 w-48 rounded-xl bg-pastel-ink dark:bg-pastel-bgDark text-white p-3 shadow-xl pointer-events-none">
-          <p className="text-[12px] font-semibold">{entry.patient.name}</p>
-          <p className="text-[11px] opacity-70 mb-1.5">Risk {entry.patient.risk} · {STATUS_LABEL[status]}</p>
-          <p className="text-[10.5px] opacity-80 leading-snug">{entry.patient.explanation}</p>
-          <p className="text-[10px] opacity-60 mt-1.5">Last vitals {entry.patient.lastVitals}</p>
-        </div>
-      )}
+      <AnimatePresence>
+        {hover && entry.patient && !dim && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute z-30 top-full mt-2 left-1/2 -translate-x-1/2 w-56 rounded-2xl bg-white dark:bg-pastel-cardDark border border-pastel-brandLight dark:border-pastel-borderDark p-3 shadow-[0_6px_20px_rgba(11,13,14,0.08)] text-pastel-ink dark:text-pastel-inkDark pointer-events-none"
+          >
+            <p className="text-[12px] font-semibold">{entry.patient.name}</p>
+            <p className="text-[11px] text-pastel-sub dark:text-pastel-subDark mb-1">Risk {entry.patient.risk} · {STATUS_LABEL[status]}</p>
+            <p className="text-[10.5px] opacity-80 leading-snug">{entry.patient.explanation}</p>
+            <p className="text-[10px] opacity-60 mt-1.5">Last vitals {entry.patient.lastVitals}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -53,12 +149,25 @@ export default function WardHeatmap() {
   const allPatients = wardFloors.flatMap((f) => f.rooms.map((r) => r.patient).filter(Boolean));
   const selectedPatient = allPatients.find((p) => p.id === selectedId);
 
+  function clamp(val, a, b) {
+    return Math.max(a, Math.min(b, val));
+  }
+
   function onMouseDown(e) {
     dragState.current = { startX: e.clientX - pan.x, startY: e.clientY - pan.y };
   }
   function onMouseMove(e) {
     if (!dragState.current) return;
-    setPan({ x: e.clientX - dragState.current.startX, y: e.clientY - dragState.current.startY });
+    const rawX = e.clientX - dragState.current.startX;
+    const rawY = e.clientY - dragState.current.startY;
+
+    // compute soft bounds so plan can't be dragged entirely off-screen
+    const maxX = 200;
+    const minX = -Math.max(0, PLAN_WIDTH * zoom - (window.innerWidth - 240));
+    const maxY = 80;
+    const minY = -Math.max(0, PLAN_HEIGHT * zoom - 200);
+
+    setPan({ x: clamp(rawX, minX, maxX), y: clamp(rawY, minY, maxY) });
   }
   function onMouseUp() {
     dragState.current = null;
@@ -79,19 +188,21 @@ export default function WardHeatmap() {
           <p className="text-[13px] text-pastel-sub dark:text-pastel-subDark mb-4">Live occupancy and risk across all floors.</p>
 
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-            <div className="flex gap-1.5">
-              {wardFloors.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setFloorId(f.id)}
-                  className={`px-3 py-1.5 rounded-full text-[12.5px] font-medium transition-colors ${
-                    floorId === f.id ? 'bg-pastel-brand text-white' : 'bg-white dark:bg-pastel-cardDark text-pastel-sub dark:text-pastel-subDark border border-pastel-brandLight dark:border-pastel-borderDark'
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+            <div className="flex gap-1.5 border-b border-transparent">
+                {wardFloors.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setFloorId(f.id)}
+                    className={`px-3 pb-2 text-[12.5px] font-medium transition-colors ${
+                      floorId === f.id
+                        ? 'text-pastel-ink dark:text-pastel-inkDark border-b-2 border-pastel-brand'
+                        : 'text-pastel-sub dark:text-pastel-subDark'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
 
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 h-9 px-3 rounded-full bg-white dark:bg-pastel-cardDark border border-pastel-brandLight dark:border-pastel-borderDark w-52">
@@ -114,30 +225,64 @@ export default function WardHeatmap() {
 
           <div className="flex items-center gap-4 mb-4">
             {Object.entries(STATUS_LABEL).map(([key, label]) => (
-              <span key={key} className="flex items-center gap-1.5 text-[11.5px] text-pastel-sub dark:text-pastel-subDark">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: STATUS_COLOR[key] }} aria-hidden="true" />
+              <span key={key} className="flex items-center gap-2 text-[11.5px] text-pastel-sub dark:text-pastel-subDark">
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{
+                    background: STATUS_COLOR[key],
+                    boxShadow: `0 0 12px ${hexToRgba(STATUS_COLOR[key], 0.08)}`,
+                  }}
+                  aria-hidden="true"
+                />
                 {label} ({counts[key]})
               </span>
             ))}
           </div>
 
           <div
-            className="rounded-2xl bg-white dark:bg-pastel-cardDark border border-pastel-brandLight dark:border-pastel-borderDark p-6 overflow-hidden cursor-grab active:cursor-grabbing select-none"
+            className="rounded-2xl bg-white dark:bg-pastel-cardDark border border-pastel-brandLight dark:border-pastel-borderDark p-8 overflow-hidden cursor-grab active:cursor-grabbing select-none"
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
             onMouseLeave={onMouseUp}
           >
-            <div
-              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left', transition: dragState.current ? 'none' : 'transform 0.15s ease-out' }}
+            <motion.div
+              style={{ transformOrigin: 'top left' }}
+              animate={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
+              transition={dragState.current ? { duration: 0 } : { duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
             >
-              <div className="grid grid-cols-6 gap-3 w-[560px]">
-                {floor.rooms.map((entry) => {
-                  const dim = query && !(entry.room.toLowerCase().includes(query.toLowerCase()) || entry.patient?.name.toLowerCase().includes(query.toLowerCase()));
-                  return <RoomTile key={entry.room} entry={entry} onSelect={setSelectedId} dim={dim} />;
-                })}
+              {/* Floor plan: corridor with rooms along top & bottom, nurse-station marker in center */}
+              <div className="w-[720px] h-[320px] relative">
+                {/* Corridor */}
+                <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-12 flex items-center justify-center">
+                  <div className="w-full h-2 rounded-full bg-pastel-brandLight dark:bg-pastel-brandLightDark" />
+                </div>
+
+                {/* Nurse station marker */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2">
+                  <div className="rounded-full bg-white dark:bg-pastel-cardDark border border-pastel-brandLight dark:border-pastel-borderDark p-2 shadow-[0_6px_20px_rgba(11,13,14,0.06)]">
+                    <MapPin size={18} className="text-pastel-brand" />
+                  </div>
+                  <div className="text-[12px] font-medium text-pastel-sub dark:text-pastel-subDark">Nurse station</div>
+                </div>
+
+                {/* Top row rooms */}
+                <div className="absolute left-6 right-6 top-[20%] flex justify-between items-center gap-3 px-2">
+                  {floor.rooms.slice(0, Math.ceil(floor.rooms.length / 2)).map((entry) => {
+                    const dim = query && !(entry.room.toLowerCase().includes(query.toLowerCase()) || entry.patient?.name.toLowerCase().includes(query.toLowerCase()));
+                    return <RoomTile key={entry.room} entry={entry} onSelect={setSelectedId} dim={dim} />;
+                  })}
+                </div>
+
+                {/* Bottom row rooms */}
+                <div className="absolute left-6 right-6 bottom-[20%] flex justify-between items-center gap-3 px-2">
+                  {floor.rooms.slice(Math.ceil(floor.rooms.length / 2)).map((entry) => {
+                    const dim = query && !(entry.room.toLowerCase().includes(query.toLowerCase()) || entry.patient?.name.toLowerCase().includes(query.toLowerCase()));
+                    return <RoomTile key={entry.room} entry={entry} onSelect={setSelectedId} dim={dim} />;
+                  })}
+                </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </main>
       </div>
