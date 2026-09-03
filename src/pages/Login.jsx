@@ -1,20 +1,69 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, AlertCircle } from 'lucide-react';
 import { DoctorIllustration } from '../components/clinic/DoctorIllustration';
 import { useAppStore } from '../store/useAppStore';
+import { useAuth } from '../context/AuthContext';
+import { login as apiLogin, getMe } from '../api/auth';
+import { NetworkError, ApiError } from '../api/client';
+
+// Role → route mapping — must stay in sync with App.jsx route declarations.
+const ROLE_ROUTES = {
+  nurse:     '/nurse',
+  physician: '/physician',
+  admin:     '/admin',
+};
 
 export default function Login() {
-  const navigate = useNavigate();
-  const [signingIn, setSigningIn] = useState(false);
-  const darkMode = useAppStore((s) => s.darkMode);
-  const toggleDarkMode = useAppStore((s) => s.toggleDarkMode);
+  const navigate        = useNavigate();
+  const { login }       = useAuth();
+  const darkMode        = useAppStore((s) => s.darkMode);
+  const toggleDarkMode  = useAppStore((s) => s.toggleDarkMode);
 
-  function handleSignIn(e) {
+  const [email,     setEmail]     = useState('');
+  const [password,  setPassword]  = useState('');
+  const [signingIn, setSigningIn] = useState(false);
+  const [error,     setError]     = useState(null); // null | string
+
+  async function handleSignIn(e) {
     e.preventDefault();
     if (signingIn) return;
+
+    setError(null);
     setSigningIn(true);
-    setTimeout(() => navigate('/nurse'), 550);
+
+    try {
+      // 1 — Exchange credentials for a token (OAuth2 form-encoded).
+      const { access_token } = await apiLogin(email, password);
+
+      // 2 — Fetch the user profile so we know the role.
+      //     Store the token in localStorage first so apiFetch() can read it.
+      localStorage.setItem('ss_token', access_token);
+      const user = await getMe();
+
+      // 3 — Commit to AuthContext (also persists user to localStorage).
+      login(access_token, user);
+
+      // 4 — Redirect based on role (backend returns titlecase e.g. "Nurse", "Physician", "Admin").
+      const roleKey = user.role?.toLowerCase();
+      const destination = ROLE_ROUTES[roleKey] ?? '/nurse';
+      navigate(destination, { replace: true });
+
+    } catch (err) {
+      if (err instanceof NetworkError) {
+        setError("Can't reach the server. Is the backend running?");
+      } else if (err instanceof ApiError) {
+        if (err.status === 401) {
+          setError('Invalid email or password. Please try again.');
+        } else {
+          setError(`Login failed (${err.status}): ${err.message}`);
+        }
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
+    } finally {
+      setSigningIn(false);
+    }
   }
 
   return (
@@ -53,31 +102,55 @@ export default function Login() {
           {darkMode ? <Sun size={13} /> : <Moon size={13} />}
         </button>
 
-        <form onSubmit={handleSignIn} className="w-full max-w-sm">
+        <form onSubmit={handleSignIn} className="w-full max-w-sm" noValidate>
           <div className="h-9 w-9 rounded-xl bg-pastel-brand flex items-center justify-center text-white text-[15px] font-bold mb-5">S</div>
           <h1 className="text-[22px] font-semibold text-pastel-ink dark:text-pastel-inkDark mb-1">Welcome back</h1>
           <p className="text-[13.5px] text-pastel-sub dark:text-pastel-subDark mb-7">Sign in to your ward dashboard.</p>
 
-          <label className="block text-[12.5px] font-medium text-pastel-ink dark:text-pastel-inkDark mb-1.5">Staff ID</label>
+          {/* Error banner */}
+          {error && (
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 mb-5 px-3.5 py-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-[12.5px] leading-snug"
+            >
+              <AlertCircle size={14} className="mt-0.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <label
+            htmlFor="login-email"
+            className="block text-[12.5px] font-medium text-pastel-ink dark:text-pastel-inkDark mb-1.5"
+          >
+            Email
+          </label>
           <input
-            type="text"
-            placeholder="e.g. n.thomas"
+            id="login-email"
+            type="email"
+            autoComplete="username"
+            placeholder="e.g. n.thomas@hospital.org"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
             className="w-full h-11 px-3.5 mb-4 rounded-xl border border-pastel-brandLight dark:border-pastel-borderDark bg-white dark:bg-pastel-cardDark text-[13.5px] text-pastel-ink dark:text-pastel-inkDark outline-none focus:border-pastel-brand transition-colors"
           />
 
-          <label className="block text-[12.5px] font-medium text-pastel-ink dark:text-pastel-inkDark mb-1.5">Password</label>
+          <label
+            htmlFor="login-password"
+            className="block text-[12.5px] font-medium text-pastel-ink dark:text-pastel-inkDark mb-1.5"
+          >
+            Password
+          </label>
           <input
+            id="login-password"
             type="password"
+            autoComplete="current-password"
             placeholder="Enter your password"
-            className="w-full h-11 px-3.5 mb-4 rounded-xl border border-pastel-brandLight dark:border-pastel-borderDark bg-white dark:bg-pastel-cardDark text-[13.5px] text-pastel-ink dark:text-pastel-inkDark outline-none focus:border-pastel-brand transition-colors"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full h-11 px-3.5 mb-6 rounded-xl border border-pastel-brandLight dark:border-pastel-borderDark bg-white dark:bg-pastel-cardDark text-[13.5px] text-pastel-ink dark:text-pastel-inkDark outline-none focus:border-pastel-brand transition-colors"
           />
-
-          <label className="block text-[12.5px] font-medium text-pastel-ink dark:text-pastel-inkDark mb-1.5">Role</label>
-          <select className="w-full h-11 px-3.5 mb-6 rounded-xl border border-pastel-brandLight dark:border-pastel-borderDark bg-white dark:bg-pastel-cardDark text-[13.5px] text-pastel-ink dark:text-pastel-inkDark outline-none focus:border-pastel-brand transition-colors">
-            <option>Nurse</option>
-            <option>Physician</option>
-            <option>Ward admin</option>
-          </select>
 
           <button
             type="submit"
