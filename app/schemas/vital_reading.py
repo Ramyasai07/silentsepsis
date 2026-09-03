@@ -35,7 +35,9 @@ class VitalReadingCreate(BaseModel):
                 recorded_at = recorded_at.astimezone(timezone.utc)
 
             if recorded_at > datetime.now(timezone.utc) + timedelta(minutes=5):
-                raise ValueError("recorded_at cannot be more than 5 minutes in the future")
+                raise ValueError(
+                    "recorded_at cannot be more than 5 minutes in the future"
+                )
 
             self.recorded_at = recorded_at
 

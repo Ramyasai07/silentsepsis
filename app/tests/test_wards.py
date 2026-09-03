@@ -1,9 +1,9 @@
 import pytest
-from alembic import command
-from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import delete
 
+from alembic import command
+from alembic.config import Config
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
@@ -11,7 +11,6 @@ from app.models.patient import Patient
 from app.models.patient_baseline import PatientBaseline
 from app.models.user import User
 from app.models.ward import Ward
-
 
 client = TestClient(app)
 
@@ -176,7 +175,7 @@ def test_ward_summary() -> None:
     assert response.status_code == 200
     assert response.json()["occupied_beds"] == 1
     assert response.json()["available_beds"] == 1
-    assert response.json()["patient_count"] == 1
+    assert response.json()["totalPatients"] == 1
 
 
 def test_ward_not_found() -> None:

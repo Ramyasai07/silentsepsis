@@ -12,3 +12,8 @@ celery
 redis
 pytest
 httpx
+slowapi
+prometheus-client
+structlog
+ruff
+black

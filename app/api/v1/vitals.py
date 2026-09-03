@@ -15,7 +15,6 @@ from app.schemas.vital_reading import (
 from app.services import vital_service
 from app.services.patient_service import PatientNotFoundError
 
-
 router = APIRouter(prefix="/patients", tags=["vitals"])
 
 
@@ -42,6 +41,7 @@ def record_vital(
     current_user: User = Depends(require_role("Admin", "Physician", "Nurse")),
     db: Session = Depends(get_db),
 ) -> VitalReadingOut:
+    """Record a single physiological vital reading for a patient."""
     try:
         vital = vital_service.record_vital(db, patient_id, payload, current_user.id)
     except PatientNotFoundError as exc:
@@ -60,6 +60,7 @@ def record_vitals_batch(
     current_user: User = Depends(require_role("Admin", "Physician", "Nurse")),
     db: Session = Depends(get_db),
 ) -> list[VitalReadingOut]:
+    """Record a batch of vital readings for multiple patients."""
     if payload.patient_id != patient_id:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -67,7 +68,9 @@ def record_vitals_batch(
         )
 
     try:
-        vitals = vital_service.record_vitals_batch(db, patient_id, payload, current_user.id)
+        vitals = vital_service.record_vitals_batch(
+            db, patient_id, payload, current_user.id
+        )
     except PatientNotFoundError as exc:
         raise _map_vital_error(exc) from exc
     return vitals
@@ -83,6 +86,7 @@ def get_vitals_history(
     _current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[VitalReadingOut]:
+    """Retrieve historical vital readings for a patient."""
     try:
         return vital_service.get_vitals_history(
             db,
@@ -102,6 +106,7 @@ def get_latest_vital(
     _current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> VitalReadingOut:
+    """Retrieve the most recent vital readings for a patient."""
     try:
         vital = vital_service.get_latest_vital(db, patient_id)
     except PatientNotFoundError as exc:

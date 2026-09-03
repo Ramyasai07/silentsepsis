@@ -7,12 +7,61 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/silentsepsis
       REDIS_URL: redis://redis:6379/0
       BOOTSTRAP_SECRET: change-me-in-production
+      ENABLE_METRICS: "true"
+    restart: unless-stopped
+    healthcheck:
+      # Liveness probe — /health returns 200 immediately without DB/Redis calls.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    # To re-enable hot-reload in development, run:
+    #   docker compose run --rm api uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    # or create a docker-compose.override.yml with command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build: .
+    container_name: silentsepsis-worker
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/silentsepsis
+      REDIS_URL: redis://redis:6379/0
+      BOOTSTRAP_SECRET: change-me-in-production
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+    restart: unless-stopped
+
+  beat:
+    build: .
+    container_name: silentsepsis-beat
+    volumes:
+      - .:/app
+      - celerybeat_data:/app/celerybeat-schedule-dir
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/silentsepsis
+      REDIS_URL: redis://redis:6379/0
+      BOOTSTRAP_SECRET: change-me-in-production
+    command: celery -A app.tasks.celery_app beat --loglevel=info --schedule /app/celerybeat-schedule-dir/celerybeat-schedule
+    restart: unless-stopped
 
   db:
     image: postgres:16
@@ -25,12 +74,27 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d silentsepsis"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
     container_name: silentsepsis-redis
     ports:
       - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
 volumes:
   postgres_data:
+  celerybeat_data:

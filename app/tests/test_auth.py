@@ -1,17 +1,16 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from alembic import command
-from alembic.config import Config
 from fastapi.testclient import TestClient
 from jose import jwt
 from sqlalchemy import delete
 
+from alembic import command
+from alembic.config import Config
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
 from app.models.user import User
-
 
 client = TestClient(app)
 
@@ -86,7 +85,9 @@ def auth_header(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def create_user_as_admin(role_name: str, email: str, staff_id: str) -> dict[str, object]:
+def create_user_as_admin(
+    role_name: str, email: str, staff_id: str
+) -> dict[str, object]:
     token = bootstrap_admin()["access_token"]
     response = client.post(
         "/auth/users",

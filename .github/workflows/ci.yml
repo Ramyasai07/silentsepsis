@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "backend/**"
+  pull_request:
+    branches:
+      - main
+      - "backend/**"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: Lint
+  # Reuses the exact ruff/black versions pinned in .pre-commit-config.yaml
+  # (ruff v0.6.9, black 24.10.0) and settings from pyproject.toml.
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint (ruff + black)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install linters
+        # Pin exactly to the same versions enforced by .pre-commit-config.yaml
+        run: |
+          pip install "ruff==0.6.9" "black==24.10.0"
+
+      - name: Run ruff
+        # Matches pyproject.toml: select = ["E","F","I"], line-length = 88, target = py311
+        run: ruff check .
+
+      - name: Run black (check only)
+        # Matches pyproject.toml: line-length = 88, target-version = py311
+        run: black --check .
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Test
+  # Uses GitHub Actions services for Postgres 16 and Redis 7.
+  # Rationale for native services over docker compose:
+  #   - Avoids building the application image on every CI run (faster).
+  #   - Services spin up alongside the job runner; no compose lifecycle needed.
+  #   - Alembic migrations are run directly from source, matching local dev.
+  # Test job depends on lint to surface fast lint failures without wasting
+  # database spin-up time on trivially broken code.
+  # ---------------------------------------------------------------------------
+  test:
+    name: Test (pytest)
+    runs-on: ubuntu-latest
+    needs: lint
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: silentsepsis
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d silentsepsis"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 3
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/silentsepsis
+      REDIS_URL: redis://localhost:6379/0
+      BOOTSTRAP_SECRET: ci-bootstrap-secret
+      SECRET_KEY: ci-secret-key-for-testing-only
+      ENABLE_METRICS: "true"
+      ENVIRONMENT: testing
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Alembic migrations
+        run: alembic upgrade head
+
+      - name: Run pytest
+        run: pytest --tb=short -v

@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import timezone
-
 from app.ml.base import (
-    FeatureContribution,
-    PredictionResult,
     RISK_SCORE_HIGH_MAX,
     RISK_SCORE_LOW_MAX,
     RISK_SCORE_MODERATE_MAX,
@@ -13,6 +8,8 @@ from app.ml.base import (
     RISK_TIER_HIGH,
     RISK_TIER_LOW,
     RISK_TIER_MODERATE,
+    FeatureContribution,
+    PredictionResult,
     RiskPredictor,
 )
 from app.models.patient_baseline import PatientBaseline
@@ -31,7 +28,14 @@ SPO2_WEIGHT = 1.8
 TEMPERATURE_WEIGHT = 0.8
 SYSTOLIC_BP_WEIGHT = 1.0
 DIASTOLIC_BP_WEIGHT = 1.0
-MAX_RISK_SCORE = HR_WEIGHT + RR_WEIGHT + SPO2_WEIGHT + TEMPERATURE_WEIGHT + SYSTOLIC_BP_WEIGHT + DIASTOLIC_BP_WEIGHT
+MAX_RISK_SCORE = (
+    HR_WEIGHT
+    + RR_WEIGHT
+    + SPO2_WEIGHT
+    + TEMPERATURE_WEIGHT
+    + SYSTOLIC_BP_WEIGHT
+    + DIASTOLIC_BP_WEIGHT
+)
 
 
 def _mean(range_tuple: tuple[float, float]) -> float:
@@ -50,7 +54,9 @@ def _normalize_unsigned_deviation(value: float, target: float, scale: float) -> 
     return _clamp(abs(value - target) / scale, 0.0, 1.0)
 
 
-def _baseline_or_normal(value: float | None, normal: float | tuple[float, float]) -> float:
+def _baseline_or_normal(
+    value: float | None, normal: float | tuple[float, float]
+) -> float:
     if value is not None:
         return value
     if isinstance(normal, tuple):

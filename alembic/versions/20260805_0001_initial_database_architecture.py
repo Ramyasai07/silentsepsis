@@ -7,9 +7,10 @@ Create Date: 2026-08-05 00:00:00.000000
 
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision: str = "20260805_0001"
 down_revision: Union[str, Sequence[str], None] = None
@@ -125,7 +126,9 @@ def upgrade() -> None:
         sa.Column("email", sa.String(length=255), nullable=False),
         sa.Column("hashed_password", sa.String(length=255), nullable=False),
         sa.Column("role_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("is_active", sa.Boolean(), server_default=sa.text("true"), nullable=False),
+        sa.Column(
+            "is_active", sa.Boolean(), server_default=sa.text("true"), nullable=False
+        ),
         sa.Column("last_login", sa.DateTime(timezone=True), nullable=True),
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column(
@@ -195,7 +198,9 @@ def upgrade() -> None:
         ["current_status"],
         unique=False,
     )
-    op.create_index(op.f("ix_patients_full_name"), "patients", ["full_name"], unique=False)
+    op.create_index(
+        op.f("ix_patients_full_name"), "patients", ["full_name"], unique=False
+    )
     op.create_index(
         op.f("ix_patients_hospital_patient_id"),
         "patients",
@@ -232,22 +237,30 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_audit_logs")),
     )
-    op.create_index(op.f("ix_audit_logs_action"), "audit_logs", ["action"], unique=False)
-    op.create_index(op.f("ix_audit_logs_entity"), "audit_logs", ["entity"], unique=False)
+    op.create_index(
+        op.f("ix_audit_logs_action"), "audit_logs", ["action"], unique=False
+    )
+    op.create_index(
+        op.f("ix_audit_logs_entity"), "audit_logs", ["entity"], unique=False
+    )
     op.create_index(
         op.f("ix_audit_logs_entity_id"),
         "audit_logs",
         ["entity_id"],
         unique=False,
     )
-    op.create_index(op.f("ix_audit_logs_user_id"), "audit_logs", ["user_id"], unique=False)
+    op.create_index(
+        op.f("ix_audit_logs_user_id"), "audit_logs", ["user_id"], unique=False
+    )
 
     op.create_table(
         "notifications",
         sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("title", sa.String(length=160), nullable=False),
         sa.Column("message", sa.Text(), nullable=False),
-        sa.Column("is_read", sa.Boolean(), server_default=sa.text("false"), nullable=False),
+        sa.Column(
+            "is_read", sa.Boolean(), server_default=sa.text("false"), nullable=False
+        ),
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column(
             "created_at",
@@ -472,7 +485,9 @@ def upgrade() -> None:
         ["acknowledged_by"],
         unique=False,
     )
-    op.create_index(op.f("ix_alerts_patient_id"), "alerts", ["patient_id"], unique=False)
+    op.create_index(
+        op.f("ix_alerts_patient_id"), "alerts", ["patient_id"], unique=False
+    )
     op.create_index(
         op.f("ix_alerts_patient_status_created_at"),
         "alerts",
@@ -561,7 +576,9 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_feedback")),
     )
-    op.create_index(op.f("ix_feedback_alert_id"), "feedback", ["alert_id"], unique=False)
+    op.create_index(
+        op.f("ix_feedback_alert_id"), "feedback", ["alert_id"], unique=False
+    )
     op.create_index(
         op.f("ix_feedback_clinician_id"),
         "feedback",

@@ -29,4 +29,12 @@ class WardSummaryOut(BaseModel):
     capacity: int
     occupied_beds: int
     available_beds: int
-    patient_count: int
+    ward: str
+    activeAlerts: int
+    trendingUp: int
+    stable: int
+    avgConfirmMinutes: float
+    riskLoad: int
+    totalPatients: int
+
+    model_config = ConfigDict(from_attributes=True)
