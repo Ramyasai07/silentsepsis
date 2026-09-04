@@ -59,7 +59,7 @@ export default function PhysicianDashboard() {
               </div>
               <div className="stat-card" style={{ padding: 12 }}>
                 <p className="stat-label">Confidence interval</p>
-                <p className="stat-value" style={{ fontSize: 22 }}>±{patient.ci}</p>
+                <p className="stat-value text-dim" style={{ fontSize: 22 }}>N/A</p>
               </div>
               <div className="stat-card" style={{ padding: 12 }}>
                 <p className="stat-label">Projected trajectory</p>
