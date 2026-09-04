@@ -1,0 +1,23 @@
+# Keep AI data directories available but ignore generated/downloaded content.
+data/raw/*
+!data/raw/.gitkeep
+
+# Ignore common large generated outputs
+*.csv
+*.tsv
+*.parquet
+*.pkl
+*.joblib
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.keras
+*.zip
+*.gz
+*.tar
+*.tar.gz
+
+# Ignore local notebooks outputs if added later
+.ipynb_checkpoints/
+research/outputs/
