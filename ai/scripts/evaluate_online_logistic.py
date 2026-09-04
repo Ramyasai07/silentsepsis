@@ -1,22 +1,19 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
-from pathlib import Path
-
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
-import joblib
-import numpy as np
-import pandas as pd
+import joblib  # noqa: E402
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
 
-from ai.ml.metrics import evaluate_probabilities
-
+from ai.ml.metrics import evaluate_probabilities  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -29,13 +26,9 @@ OUTPUT = ARTIFACT / "test_evaluation.json"
 if OUTPUT.exists():
     raise FileExistsError(f"Refusing to overwrite: {OUTPUT}")
 
-metadata = json.loads(
-    (ARTIFACT / "metadata.json").read_text(encoding="utf-8")
-)
+metadata = json.loads((ARTIFACT / "metadata.json").read_text(encoding="utf-8"))
 
-source_metadata = json.loads(
-    (SOURCE / "metadata.json").read_text(encoding="utf-8")
-)
+source_metadata = json.loads((SOURCE / "metadata.json").read_text(encoding="utf-8"))
 
 model_path = SOURCE / "model.joblib"
 imputer_path = SOURCE / "imputer.joblib"
@@ -43,17 +36,13 @@ calibrator_path = ARTIFACT / "platt_calibrator.joblib"
 test_path = DATA / "test.csv"
 
 expected_model_hash = metadata["provenance"]["source_model_sha256"]
-actual_model_hash = hashlib.sha256(
-    model_path.read_bytes()
-).hexdigest()
+actual_model_hash = hashlib.sha256(model_path.read_bytes()).hexdigest()
 
 if actual_model_hash != expected_model_hash:
     raise ValueError("Source model checksum mismatch")
 
 expected_imputer_hash = metadata["provenance"]["source_imputer_sha256"]
-actual_imputer_hash = hashlib.sha256(
-    imputer_path.read_bytes()
-).hexdigest()
+actual_imputer_hash = hashlib.sha256(imputer_path.read_bytes()).hexdigest()
 
 if actual_imputer_hash != expected_imputer_hash:
     raise ValueError("Source imputer checksum mismatch")
@@ -80,16 +69,12 @@ y_test = test["target"].astype(np.int8).to_numpy()
 
 X_test_imputed = imputer.transform(X_test)
 
-raw_probabilities = model.predict_proba(
-    X_test_imputed
-)[:, 1]
+raw_probabilities = model.predict_proba(X_test_imputed)[:, 1]
 
 clipped = np.clip(raw_probabilities, 1e-6, 1 - 1e-6)
 logits = np.log(clipped / (1 - clipped))
 
-calibrated_probabilities = calibrator.predict_proba(
-    logits.reshape(-1, 1)
-)[:, 1]
+calibrated_probabilities = calibrator.predict_proba(logits.reshape(-1, 1))[:, 1]
 
 threshold = float(metadata["threshold"])
 
@@ -110,13 +95,9 @@ for patient_id, target, probability in zip(
     values[0] = max(values[0], int(target))
     values[1] = max(values[1], float(probability))
 
-patient_targets = np.array(
-    [v[0] for v in patient_values.values()]
-)
+patient_targets = np.array([v[0] for v in patient_values.values()])
 
-patient_probabilities = np.array(
-    [v[1] for v in patient_values.values()]
-)
+patient_probabilities = np.array([v[1] for v in patient_values.values()])
 
 patient_metrics = evaluate_probabilities(
     patient_targets,
@@ -145,9 +126,7 @@ result = {
         "threshold_tuned": False,
         "model_sha256": actual_model_hash,
         "imputer_sha256": actual_imputer_hash,
-        "calibrator_sha256": hashlib.sha256(
-            calibrator_path.read_bytes()
-        ).hexdigest(),
+        "calibrator_sha256": hashlib.sha256(calibrator_path.read_bytes()).hexdigest(),
     },
     "created_at": datetime.now(timezone.utc).isoformat(),
 }
@@ -158,4 +137,3 @@ OUTPUT.write_text(
 )
 
 print(json.dumps(result, indent=2))
-

@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 ONLINE_FEATURE_COLUMNS = (
     "HR",
     "O2Sat",
@@ -48,13 +47,25 @@ def online_metadata() -> dict[str, object]:
         },
         "transformations": {
             "MAP": "(SBP + 2 * DBP) / 3 when both source values are present",
-            "numeric_features": "Parse current-row values as numeric; invalid or missing values remain null",
-            "Gender": "FEMALE=0, MALE=1, OTHER=-1, UNKNOWN=-1; PhysioNet 0=0 and 1=1",
-            "missingness": "Indicators are computed from original current-row values before transformation",
+            "numeric_features": (
+                (
+                    "Parse current-row values as numeric; invalid or missing "
+                    "values remain null"
+                )
+            ),
+            "Gender": (
+                "FEMALE=0, MALE=1, OTHER=1, UNKNOWN=-1; " "PhysioNet 0=0 and 1=1"
+            ),
+            "missingness": (
+                "Indicators are computed from original current-row values "
+                "before transformation"
+            ),
         },
         "gender_mapping": GENDER_MAPPING,
         "missingness_definitions": {
-            f"{column}_missing": f"1 when original {column} is missing or invalid, otherwise 0"
+            f"{column}_missing": (
+                f"1 when original {column} is missing or invalid, otherwise 0"
+            )
             for column in VITAL_SOURCE_COLUMNS
         },
         "imputation_policy": "none; missing values remain null",
@@ -90,7 +101,9 @@ def gender_value(value: object) -> int:
     raise ValueError(f"Unsupported Gender value: {value}")
 
 
-def transform_online_row(row: dict[str, object] | pd.Series) -> dict[str, float | int | None]:
+def transform_online_row(
+    row: dict[str, object] | pd.Series
+) -> dict[str, float | int | None]:
     values = {column: numeric_value(row.get(column)) for column in VITAL_SOURCE_COLUMNS}
     values["MAP"] = (
         (values["SBP"] + 2 * values["DBP"]) / 3
@@ -100,7 +113,9 @@ def transform_online_row(row: dict[str, object] | pd.Series) -> dict[str, float 
     values["Age"] = numeric_value(row.get("Age"))
     values["Gender"] = gender_value(row.get("Gender"))
     for source_column in VITAL_SOURCE_COLUMNS:
-        values[f"{source_column}_missing"] = int(is_missing_value(row.get(source_column)))
+        values[f"{source_column}_missing"] = int(
+            is_missing_value(row.get(source_column))
+        )
     return {column: values[column] for column in ONLINE_FEATURE_COLUMNS}
 
 

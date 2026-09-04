@@ -654,6 +654,3 @@ def test_empty_prediction_history_returns_empty_list_and_latest_returns_404() ->
     assert history_response.status_code == 200
     assert history_response.json() == []
     assert latest_response.status_code == 404
-
-
-

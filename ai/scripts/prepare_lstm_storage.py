@@ -1,9 +1,8 @@
-from pathlib import Path
 import gc
 import os
+from pathlib import Path
 
 import numpy as np
-
 
 SEQUENCE_ROOT = Path(__file__).resolve().parents[1] / "data" / "sequences"
 
@@ -22,7 +21,9 @@ def validate_split(split_name: str, X: np.ndarray, y: np.ndarray) -> None:
 
     expected_shape = EXPECTED_SHAPES[split_name]
     if X.shape != expected_shape:
-        raise ValueError(f"{split_name}: expected X shape {expected_shape}, got {X.shape}.")
+        raise ValueError(
+            f"{split_name}: expected X shape {expected_shape}, got {X.shape}."
+        )
 
     if X.shape[0] != y.size:
         raise ValueError(
@@ -37,7 +38,9 @@ def validate_split(split_name: str, X: np.ndarray, y: np.ndarray) -> None:
 
     unique_labels = np.unique(y)
     if not np.all(np.isin(unique_labels, [0, 1])):
-        raise ValueError(f"{split_name}: y contains values outside {0, 1}: {unique_labels}.")
+        raise ValueError(
+            f"{split_name}: y contains values outside {0, 1}: {unique_labels}."
+        )
 
 
 def verify_mappable(path: Path) -> bool:
@@ -68,9 +71,13 @@ def convert_split(split_name: str) -> None:
     x_temp_loaded = np.load(temp_x, mmap_mode="r")
     y_temp_loaded = np.load(temp_y, mmap_mode="r")
     if x_temp_loaded.shape != X.shape:
-        raise ValueError(f"{split_name}: temporary X shape mismatch after save: {x_temp_loaded.shape}.")
+        raise ValueError(
+            f"{split_name}: temporary X shape mismatch after save: {x_temp_loaded.shape}."
+        )
     if y_temp_loaded.shape != y.shape:
-        raise ValueError(f"{split_name}: temporary y shape mismatch after save: {y_temp_loaded.shape}.")
+        raise ValueError(
+            f"{split_name}: temporary y shape mismatch after save: {y_temp_loaded.shape}."
+        )
 
     del x_temp_loaded
     del y_temp_loaded
@@ -108,7 +115,9 @@ def main() -> None:
     for split_name in SPLITS:
         npz_path = SEQUENCE_ROOT / f"{split_name}_sequences.npz"
         if not npz_path.exists():
-            raise FileNotFoundError(f"Original NPZ missing after conversion: {npz_path}")
+            raise FileNotFoundError(
+                f"Original NPZ missing after conversion: {npz_path}"
+            )
 
     print("FINAL SUMMARY: PASS")
 

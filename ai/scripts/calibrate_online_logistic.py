@@ -1,20 +1,18 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
-
 import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
-import joblib
-import numpy as np
-from sklearn.linear_model import LogisticRegression
+import joblib  # noqa: E402
+import numpy as np  # noqa: E402
+from sklearn.linear_model import LogisticRegression  # noqa: E402
 
-from ai.ml.metrics import evaluate_probabilities, select_threshold
+from ai.ml.metrics import evaluate_probabilities, select_threshold  # noqa: E402
 
 
 def calibrate_online_logistic(
@@ -86,18 +84,14 @@ def calibrate_online_logistic(
 
     calibrator.fit(calibration_logits, calibration_targets)
 
-    calibrated_assessment = calibrator.predict_proba(
-        assessment_logits
-    )[:, 1]
+    calibrated_assessment = calibrator.predict_proba(assessment_logits)[:, 1]
 
     raw_threshold = select_threshold(
         calibration_targets,
         calibration_probabilities,
     )
 
-    calibrated_calibration = calibrator.predict_proba(
-        calibration_logits
-    )[:, 1]
+    calibrated_calibration = calibrator.predict_proba(calibration_logits)[:, 1]
 
     calibrated_threshold = select_threshold(
         calibration_targets,
@@ -133,9 +127,7 @@ def calibrate_online_logistic(
             "method": "sorted_patient_ids[::2]",
             "calibration_patients": len(calibration_patients),
             "calibration_rows": int(calibration_mask.sum()),
-            "assessment_patients": int(
-                len(patients) - len(calibration_patients)
-            ),
+            "assessment_patients": int(len(patients) - len(calibration_patients)),
             "assessment_rows": int(assessment_mask.sum()),
         },
         "threshold": float(calibrated_threshold.threshold),
@@ -146,9 +138,7 @@ def calibrate_online_logistic(
             "validation_only": True,
             "test_read": False,
             "training_performed": False,
-            "source_model_sha256": hashlib.sha256(
-                model_path.read_bytes()
-            ).hexdigest(),
+            "source_model_sha256": hashlib.sha256(model_path.read_bytes()).hexdigest(),
             "source_imputer_sha256": hashlib.sha256(
                 imputer_path.read_bytes()
             ).hexdigest(),
@@ -174,4 +164,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

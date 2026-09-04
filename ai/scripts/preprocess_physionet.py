@@ -77,13 +77,19 @@ def build_patient_target(patient_df: pd.DataFrame) -> pd.Series:
     required_cols = {"ICULOS", "SepsisLabel"}
     missing_cols = required_cols - set(patient_df.columns)
     if missing_cols:
-        raise ValueError(f"Patient file missing required columns: {sorted(missing_cols)}")
+        raise ValueError(
+            f"Patient file missing required columns: {sorted(missing_cols)}"
+        )
 
     patient_df = patient_df.copy()
     patient_df["ICULOS"] = pd.to_numeric(patient_df["ICULOS"], errors="coerce")
-    patient_df["SepsisLabel"] = pd.to_numeric(patient_df["SepsisLabel"], errors="coerce")
+    patient_df["SepsisLabel"] = pd.to_numeric(
+        patient_df["SepsisLabel"], errors="coerce"
+    )
 
-    patient_df = patient_df[patient_df["ICULOS"].notna()].sort_values("ICULOS", kind="mergesort")
+    patient_df = patient_df[patient_df["ICULOS"].notna()].sort_values(
+        "ICULOS", kind="mergesort"
+    )
     patient_df = patient_df.reset_index(drop=True)
 
     first_positive_time = None
@@ -118,7 +124,14 @@ def prepare_patient_frame(patient_df: pd.DataFrame, patient_id: str) -> pd.DataF
 
 
 def get_numeric_feature_names(patient_df: pd.DataFrame) -> list[str]:
-    excluded = {"patient_id", "file_path", "training_set", "split", "SepsisLabel", "target"}
+    excluded = {
+        "patient_id",
+        "file_path",
+        "training_set",
+        "split",
+        "SepsisLabel",
+        "target",
+    }
     names = []
     for col in patient_df.columns:
         if col in excluded:
@@ -133,7 +146,9 @@ def count_raw_psv_files() -> dict[str, int]:
     counts = {}
     for dataset_name in ["training_setA", "training_setB"]:
         dataset_dir = RAW_ROOT / dataset_name
-        counts[dataset_name] = len([path for path in dataset_dir.glob("*.psv") if path.is_file()])
+        counts[dataset_name] = len(
+            [path for path in dataset_dir.glob("*.psv") if path.is_file()]
+        )
     counts["total"] = counts["training_setA"] + counts["training_setB"]
     return counts
 
@@ -148,7 +163,9 @@ def compute_source_row_counts(manifest: pd.DataFrame) -> dict[str, int]:
     return counts
 
 
-def learn_train_statistics(manifest: pd.DataFrame) -> tuple[dict[str, float], dict[str, dict[str, int | float]], list[str]]:
+def learn_train_statistics(
+    manifest: pd.DataFrame,
+) -> tuple[dict[str, float], dict[str, dict[str, int | float]], list[str]]:
     train_rows = manifest[manifest["split"] == "train"].reset_index(drop=True)
     if train_rows.empty:
         raise ValueError("Train split is empty. Cannot learn train-only statistics.")
@@ -172,10 +189,16 @@ def learn_train_statistics(manifest: pd.DataFrame) -> tuple[dict[str, float], di
             )
 
     if numeric_feature_names is None:
-        raise ValueError("No numeric feature names were discovered in the training split.")
+        raise ValueError(
+            "No numeric feature names were discovered in the training split."
+        )
 
     medians = {
-        feature: float(pd.Series(collected_numeric_values.get(feature, [])).median()) if collected_numeric_values.get(feature) else 0.0
+        feature: (
+            float(pd.Series(collected_numeric_values.get(feature, [])).median())
+            if collected_numeric_values.get(feature)
+            else 0.0
+        )
         for feature in numeric_feature_names
     }
 
@@ -249,14 +272,20 @@ def process_patient_file(
 
     for col in CATEGORICAL_COLUMNS:
         if col in df.columns:
-            df[col] = df[col].map(lambda value: encode_category(value, categorical_mappings.get(col, {"missing": -1})))
+            df[col] = df[col].map(
+                lambda value: encode_category(
+                    value, categorical_mappings.get(col, {"missing": -1})
+                )
+            )
 
     model_columns = numeric_columns + CATEGORICAL_COLUMNS + missing_indicator_columns
     result = df[["patient_id", *model_columns, "target"]].copy()
     result = result.reset_index(drop=True)
 
     if result[model_columns].isna().any().any():
-        raise ValueError(f"NaN values remain in processed patient rows for patient {patient_id}")
+        raise ValueError(
+            f"NaN values remain in processed patient rows for patient {patient_id}"
+        )
 
     return result
 
@@ -280,7 +309,9 @@ def write_processed_split(
         patient_id = str(record["patient_id"])
 
         if not file_path.exists():
-            raise FileNotFoundError(f"Missing patient file for {patient_id}: {file_path}")
+            raise FileNotFoundError(
+                f"Missing patient file for {patient_id}: {file_path}"
+            )
 
         patient_df = read_patient_file(file_path)
         processed = process_patient_file(
@@ -296,15 +327,21 @@ def write_processed_split(
         del processed
 
 
-def verify_split_csv(split_name: str, manifest: pd.DataFrame, expected_source_rows: dict[str, int]) -> set[str]:
-    expected_split_ids = set(manifest.loc[manifest["split"] == split_name, "patient_id"].astype(str))
+def verify_split_csv(
+    split_name: str, manifest: pd.DataFrame, expected_source_rows: dict[str, int]
+) -> set[str]:
+    expected_split_ids = set(
+        manifest.loc[manifest["split"] == split_name, "patient_id"].astype(str)
+    )
     seen_split_patient_ids: set[str] = set()
     total_rows = 0
     output_path = PROCESSED_ROOT / f"{split_name}.csv"
 
     for chunk in pd.read_csv(output_path, chunksize=100_000):
         if "patient_id" not in chunk.columns or "target" not in chunk.columns:
-            raise ValueError(f"{split_name}: processed file is missing required columns")
+            raise ValueError(
+                f"{split_name}: processed file is missing required columns"
+            )
 
         total_rows += len(chunk)
 
@@ -314,11 +351,17 @@ def verify_split_csv(split_name: str, manifest: pd.DataFrame, expected_source_ro
         for patient_id in chunk["patient_id"].astype(str):
             seen_split_patient_ids.add(patient_id)
 
-        feature_columns = [col for col in chunk.columns if col not in {"patient_id", "ICULOS", "target"}]
+        feature_columns = [
+            col
+            for col in chunk.columns
+            if col not in {"patient_id", "ICULOS", "target"}
+        ]
         if "target" in feature_columns:
             raise ValueError(f"{split_name}: target appears among model features")
         if chunk[feature_columns].isna().any().any():
-            raise ValueError(f"{split_name}: unexpected NaN values remain in model features")
+            raise ValueError(
+                f"{split_name}: unexpected NaN values remain in model features"
+            )
 
     if total_rows != expected_source_rows[split_name]:
         raise ValueError(
@@ -327,11 +370,15 @@ def verify_split_csv(split_name: str, manifest: pd.DataFrame, expected_source_ro
 
     if seen_split_patient_ids != expected_split_ids:
         missing = sorted(expected_split_ids - seen_split_patient_ids)
-        raise ValueError(f"{split_name}: missing patient IDs from processed CSV: {missing[:10]}")
+        raise ValueError(
+            f"{split_name}: missing patient IDs from processed CSV: {missing[:10]}"
+        )
 
     extra = sorted(seen_split_patient_ids - expected_split_ids)
     if extra:
-        raise ValueError(f"{split_name}: processed CSV contains patient IDs not expected for this split: {extra[:10]}")
+        raise ValueError(
+            f"{split_name}: processed CSV contains patient IDs not expected for this split: {extra[:10]}"
+        )
 
     return seen_split_patient_ids
 
@@ -339,21 +386,31 @@ def verify_split_csv(split_name: str, manifest: pd.DataFrame, expected_source_ro
 def verify_raw_dataset_count() -> None:
     raw_counts = count_raw_psv_files()
     if raw_counts["training_setA"] != 20_336:
-        raise ValueError(f"training_setA raw PSV count mismatch: expected 20336, found {raw_counts['training_setA']}")
+        raise ValueError(
+            f"training_setA raw PSV count mismatch: expected 20336, found {raw_counts['training_setA']}"
+        )
     if raw_counts["training_setB"] != 20_000:
-        raise ValueError(f"training_setB raw PSV count mismatch: expected 20000, found {raw_counts['training_setB']}")
+        raise ValueError(
+            f"training_setB raw PSV count mismatch: expected 20000, found {raw_counts['training_setB']}"
+        )
     if raw_counts["total"] != 40_336:
-        raise ValueError(f"Total raw PSV count mismatch: expected 40336, found {raw_counts['total']}")
+        raise ValueError(
+            f"Total raw PSV count mismatch: expected 40336, found {raw_counts['total']}"
+        )
 
 
 def verify_processed_outputs(manifest: pd.DataFrame) -> dict[str, int]:
     source_row_counts = compute_source_row_counts(manifest)
     if source_row_counts != EXPECTED_SOURCE_ROW_COUNTS:
-        raise ValueError(f"Source row counts mismatch: expected {EXPECTED_SOURCE_ROW_COUNTS}, found {source_row_counts}")
+        raise ValueError(
+            f"Source row counts mismatch: expected {EXPECTED_SOURCE_ROW_COUNTS}, found {source_row_counts}"
+        )
 
     total_source_rows = sum(source_row_counts.values())
     if total_source_rows != EXPECTED_TOTAL_SOURCE_ROWS:
-        raise ValueError(f"Total source row count mismatch: expected {EXPECTED_TOTAL_SOURCE_ROWS}, found {total_source_rows}")
+        raise ValueError(
+            f"Total source row count mismatch: expected {EXPECTED_TOTAL_SOURCE_ROWS}, found {total_source_rows}"
+        )
 
     verify_raw_dataset_count()
 
@@ -361,16 +418,28 @@ def verify_processed_outputs(manifest: pd.DataFrame) -> dict[str, int]:
     for _, row in manifest.iterrows():
         patient_id = str(row["patient_id"])
         split_name = str(row["split"])
-        if patient_id in manifest_patient_to_split and manifest_patient_to_split[patient_id] != split_name:
-            raise ValueError(f"Patient {patient_id} appears in multiple splits in the manifest.")
+        if (
+            patient_id in manifest_patient_to_split
+            and manifest_patient_to_split[patient_id] != split_name
+        ):
+            raise ValueError(
+                f"Patient {patient_id} appears in multiple splits in the manifest."
+            )
         manifest_patient_to_split[patient_id] = split_name
 
     processed_patient_to_split: dict[str, str] = {}
     for split_name in SPLIT_NAMES:
-        processed_patient_ids = verify_split_csv(split_name, manifest, source_row_counts)
+        processed_patient_ids = verify_split_csv(
+            split_name, manifest, source_row_counts
+        )
         for patient_id in processed_patient_ids:
-            if patient_id in processed_patient_to_split and processed_patient_to_split[patient_id] != split_name:
-                raise ValueError(f"Patient {patient_id} appears in multiple processed splits.")
+            if (
+                patient_id in processed_patient_to_split
+                and processed_patient_to_split[patient_id] != split_name
+            ):
+                raise ValueError(
+                    f"Patient {patient_id} appears in multiple processed splits."
+                )
             processed_patient_to_split[patient_id] = split_name
 
     manifest_patient_ids = set(manifest_patient_to_split)
@@ -384,9 +453,13 @@ def verify_processed_outputs(manifest: pd.DataFrame) -> dict[str, int]:
 
     for patient_id, split_name in manifest_patient_to_split.items():
         if patient_id not in processed_patient_to_split:
-            raise ValueError(f"Manifest patient {patient_id} is missing from the processed outputs.")
+            raise ValueError(
+                f"Manifest patient {patient_id} is missing from the processed outputs."
+            )
         if processed_patient_to_split[patient_id] != split_name:
-            raise ValueError(f"Patient {patient_id} is assigned to {processed_patient_to_split[patient_id]} in processed outputs, but to {split_name} in the manifest.")
+            raise ValueError(
+                f"Patient {patient_id} is assigned to {processed_patient_to_split[patient_id]} in processed outputs, but to {split_name} in the manifest."
+            )
 
     return source_row_counts
 
@@ -400,8 +473,14 @@ def main() -> None:
     manifest = load_split_manifest()
     PROCESSED_ROOT.mkdir(parents=True, exist_ok=True)
 
-    train_medians, categorical_mappings, numerical_features = learn_train_statistics(manifest)
-    feature_columns = numerical_features + CATEGORICAL_COLUMNS + [f"{feature}_missing" for feature in numerical_features]
+    train_medians, categorical_mappings, numerical_features = learn_train_statistics(
+        manifest
+    )
+    feature_columns = (
+        numerical_features
+        + CATEGORICAL_COLUMNS
+        + [f"{feature}_missing" for feature in numerical_features]
+    )
 
     for split_name in SPLIT_NAMES:
         write_processed_split(
@@ -417,9 +496,14 @@ def main() -> None:
 
     metadata = {
         "feature_columns": feature_columns,
-        "missingness_indicator_columns": [f"{feature}_missing" for feature in numerical_features],
+        "missingness_indicator_columns": [
+            f"{feature}_missing" for feature in numerical_features
+        ],
         "categorical_mappings": {
-            key: {str(k): float(v) if isinstance(v, float) else int(v) for k, v in value.items()}
+            key: {
+                str(k): float(v) if isinstance(v, float) else int(v)
+                for k, v in value.items()
+            }
             for key, value in categorical_mappings.items()
         },
         "training_medians": {key: float(value) for key, value in train_medians.items()},
@@ -453,12 +537,12 @@ def main() -> None:
         print(f"- {split_name}: {source_row_counts[split_name]} rows")
 
     print("\nVerification checks:")
-    print(f"- source row counts match expected values: PASS")
-    print(f"- processed row counts match source row counts: PASS")
-    print(f"- no patient appears in multiple splits: PASS")
-    print(f"- target contains only 0 and 1: PASS")
-    print(f"- no NaN remains in model features: PASS")
-    print(f"- raw PSV file count is exactly 40336: PASS")
+    print("- source row counts match expected values: PASS")
+    print("- processed row counts match source row counts: PASS")
+    print("- no patient appears in multiple splits: PASS")
+    print("- target contains only 0 and 1: PASS")
+    print("- no NaN remains in model features: PASS")
+    print("- raw PSV file count is exactly 40336: PASS")
     print("\nFINAL SUMMARY: PASS")
 
 

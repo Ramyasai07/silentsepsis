@@ -121,14 +121,20 @@ def summarize_split(split_name: str, manifest: pd.DataFrame) -> dict:
         for col in df.columns:
             series = df[col]
             missing_count = int(series.map(is_missing_value).sum())
-            feature_missing_total[col] = feature_missing_total.get(col, 0) + missing_count
+            feature_missing_total[col] = (
+                feature_missing_total.get(col, 0) + missing_count
+            )
             feature_total_count[col] = feature_total_count.get(col, 0) + len(series)
 
             numeric_series = safe_numeric(series)
             valid_numeric = numeric_series.dropna()
             if len(valid_numeric) > 0:
-                feature_values.setdefault(col, []).extend(valid_numeric.astype(float).tolist())
-                valid_feature_count[col] = valid_feature_count.get(col, 0) + len(valid_numeric)
+                feature_values.setdefault(col, []).extend(
+                    valid_numeric.astype(float).tolist()
+                )
+                valid_feature_count[col] = valid_feature_count.get(col, 0) + len(
+                    valid_numeric
+                )
 
         file_stats.append(
             {
@@ -216,7 +222,9 @@ def print_split_summary(split_name: str, summary: dict) -> None:
     print_section(f"{split_name.upper()} analysis")
     print(f"Files in split: {summary['file_count']}")
     print(f"Total rows across files: {summary['row_count']}")
-    print(f"Rows per patient/file: min={min(summary['rows_per_patient']) if summary['rows_per_patient'] else 0}, max={max(summary['rows_per_patient']) if summary['rows_per_patient'] else 0}, mean={sum(summary['rows_per_patient']) / len(summary['rows_per_patient']) if summary['rows_per_patient'] else 0:.2f}, median={pd.Series(summary['rows_per_patient']).median() if summary['rows_per_patient'] else 0}")
+    print(
+        f"Rows per patient/file: min={min(summary['rows_per_patient']) if summary['rows_per_patient'] else 0}, max={max(summary['rows_per_patient']) if summary['rows_per_patient'] else 0}, mean={sum(summary['rows_per_patient']) / len(summary['rows_per_patient']) if summary['rows_per_patient'] else 0:.2f}, median={pd.Series(summary['rows_per_patient']).median() if summary['rows_per_patient'] else 0}"
+    )
     print(f"Column names/order: {summary['column_names']}")
     print(f"Column count: {len(summary['column_names'])}")
 
@@ -270,14 +278,30 @@ def print_split_summary(split_name: str, summary: dict) -> None:
 
 def print_recommendations() -> None:
     print_section("Recommended preprocessing considerations")
-    print("- Missing-value handling must be decided based on the observed patterns and clinical meaning of each feature.")
-    print("- Imputation or masking strategies may be needed for features with substantial missingness.")
-    print("- Scaling/normalization may be needed for continuous features, especially if using numerical models.")
-    print("- Sequence length handling should be planned carefully because each patient file is a time series with varying row counts.")
-    print("- Features with a very high missing rate or near-zero variability may need review or removal.")
-    print("- Temporal structure should be preserved if the downstream task uses sequence-aware methods.")
-    print("- Non-numeric or constant features should be reviewed before any modeling pipeline is designed.")
-    print("- This script intentionally does not choose an automatic preprocessing strategy.")
+    print(
+        "- Missing-value handling must be decided based on the observed patterns and clinical meaning of each feature."
+    )
+    print(
+        "- Imputation or masking strategies may be needed for features with substantial missingness."
+    )
+    print(
+        "- Scaling/normalization may be needed for continuous features, especially if using numerical models."
+    )
+    print(
+        "- Sequence length handling should be planned carefully because each patient file is a time series with varying row counts."
+    )
+    print(
+        "- Features with a very high missing rate or near-zero variability may need review or removal."
+    )
+    print(
+        "- Temporal structure should be preserved if the downstream task uses sequence-aware methods."
+    )
+    print(
+        "- Non-numeric or constant features should be reviewed before any modeling pipeline is designed."
+    )
+    print(
+        "- This script intentionally does not choose an automatic preprocessing strategy."
+    )
 
 
 def main() -> None:

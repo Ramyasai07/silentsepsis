@@ -87,7 +87,10 @@ def stratified_split(manifest: pd.DataFrame) -> pd.DataFrame:
     grouped: dict[tuple[str, bool], list[int]] = defaultdict(list)
 
     for index in manifest.index:
-        key = (manifest.loc[index, "training_set"], bool(manifest.loc[index, "patient_status"]))
+        key = (
+            manifest.loc[index, "training_set"],
+            bool(manifest.loc[index, "patient_status"]),
+        )
         grouped[key].append(index)
 
     split_manifest = []
@@ -97,7 +100,11 @@ def stratified_split(manifest: pd.DataFrame) -> pd.DataFrame:
         total = len(indices)
         counts = assign_split_counts(total)
 
-        split_labels = ["train"] * counts["train"] + ["validation"] * counts["validation"] + ["test"] * counts["test"]
+        split_labels = (
+            ["train"] * counts["train"]
+            + ["validation"] * counts["validation"]
+            + ["test"] * counts["test"]
+        )
         if len(split_labels) != total:
             remaining = total - len(split_labels)
             split_labels.extend(["test"] * remaining)
@@ -108,21 +115,29 @@ def stratified_split(manifest: pd.DataFrame) -> pd.DataFrame:
             split_manifest.append(item.to_dict())
 
     result = pd.DataFrame(split_manifest)
-    return result[["patient_id", "training_set", "split", "patient_status", "file_path"]]
+    return result[
+        ["patient_id", "training_set", "split", "patient_status", "file_path"]
+    ]
 
 
 def verify_manifest(manifest: pd.DataFrame, expected_total: int) -> None:
     total_files = len(manifest)
     if total_files != expected_total:
-        raise ValueError(f"Split count mismatch: expected {expected_total}, found {total_files}")
+        raise ValueError(
+            f"Split count mismatch: expected {expected_total}, found {total_files}"
+        )
 
     duplicates = manifest[manifest.duplicated(subset=["patient_id"], keep=False)]
     if not duplicates.empty:
-        raise ValueError(f"Duplicate patient IDs found across splits: {duplicates['patient_id'].tolist()}")
+        raise ValueError(
+            f"Duplicate patient IDs found across splits: {duplicates['patient_id'].tolist()}"
+        )
 
     all_expected = set()
     for dataset_name in DATASET_NAMES:
-        for file_path in find_psv_files(REPO_ROOT / "ai" / "data" / "raw" / dataset_name):
+        for file_path in find_psv_files(
+            REPO_ROOT / "ai" / "data" / "raw" / dataset_name
+        ):
             all_expected.add(file_path.stem)
 
     manifest_ids = set(manifest["patient_id"])
@@ -141,15 +156,15 @@ def print_split_summary(manifest: pd.DataFrame) -> None:
     for split_name in ["train", "validation", "test"]:
         subset = manifest[manifest["split"] == split_name]
         print(f"\n{split_name} split:")
-        print(f"  positive patients: {(subset['patient_status'] == True).sum()}")
-        print(f"  negative patients: {(subset['patient_status'] == False).sum()}")
+        print(f"  positive patients: {subset['patient_status'].eq(True).sum()}")
+        print(f"  negative patients: {subset['patient_status'].eq(False).sum()}")
         print(f"  training_setA: {(subset['training_set'] == 'training_setA').sum()}")
         print(f"  training_setB: {(subset['training_set'] == 'training_setB').sum()}")
 
     print("\nVerification checks:")
     print(f"- total split count = {len(manifest)}")
     print(f"- unique patient IDs = {manifest['patient_id'].nunique()}")
-    print(f"- missing IDs from manifest = 0")
+    print("- missing IDs from manifest = 0")
 
 
 def main() -> None:

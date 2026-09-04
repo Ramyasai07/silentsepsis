@@ -12,14 +12,13 @@ from pathlib import Path
 
 import joblib
 import numpy as np
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
 from xgboost import XGBClassifier
 
 from ai.ml.calibration import calibrate_probabilities, fit_platt_calibrator
 from ai.ml.data_loader import load_processed_dataset
 from ai.ml.metrics import evaluate_probabilities, select_threshold
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -165,7 +164,12 @@ def main() -> None:
     parser.add_argument("--source-root", type=Path, default=DEFAULT_SOURCE_ROOT)
     parser.add_argument("--artifact-root", type=Path, default=DEFAULT_ARTIFACT_ROOT)
     args = parser.parse_args()
-    print(json.dumps(calibrate_xgboost(args.data_root, args.source_root, args.artifact_root), indent=2))
+    print(
+        json.dumps(
+            calibrate_xgboost(args.data_root, args.source_root, args.artifact_root),
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

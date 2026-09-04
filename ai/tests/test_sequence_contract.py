@@ -3,7 +3,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 from tensorflow import keras
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -30,8 +29,12 @@ def test_split_manifest_integrity():
 
 def test_sequence_arrays_are_well_formed():
     for split_name in ["train", "validation", "test"]:
-        X = np.load(SEQUENCE_ROOT / f"{split_name}_X.npy", mmap_mode="r", allow_pickle=False)
-        y = np.load(SEQUENCE_ROOT / f"{split_name}_y.npy", mmap_mode="r", allow_pickle=False)
+        X = np.load(
+            SEQUENCE_ROOT / f"{split_name}_X.npy", mmap_mode="r", allow_pickle=False
+        )
+        y = np.load(
+            SEQUENCE_ROOT / f"{split_name}_y.npy", mmap_mode="r", allow_pickle=False
+        )
 
         assert X.ndim == 3
         assert X.shape[1] == 12

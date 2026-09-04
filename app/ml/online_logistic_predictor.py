@@ -8,26 +8,20 @@ import numpy as np
 import pandas as pd
 
 from app.ml.base import (
-    FeatureContribution,
-    PredictionResult,
-    RiskPredictor,
     RISK_TIER_CRITICAL,
     RISK_TIER_HIGH,
     RISK_TIER_LOW,
     RISK_TIER_MODERATE,
+    FeatureContribution,
+    PredictionResult,
+    RiskPredictor,
 )
 from app.models.patient import Gender, Patient
 from app.models.patient_baseline import PatientBaseline
 from app.models.vital_reading import VitalReading
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-ARTIFACT_ROOT = (
-    PROJECT_ROOT
-    / "ai"
-    / "artifacts"
-    / "online-logistic-v1-calibrated"
-)
+ARTIFACT_ROOT = PROJECT_ROOT / "ai" / "artifacts" / "online-logistic-v1-calibrated"
 
 MODEL_PATH = ARTIFACT_ROOT / "model.joblib"
 IMPUTER_PATH = ARTIFACT_ROOT / "imputer.joblib"
@@ -46,21 +40,15 @@ class OnlineLogisticPredictor(RiskPredictor):
         if not IMPUTER_PATH.exists():
             raise FileNotFoundError(f"Imputer artifact not found: {IMPUTER_PATH}")
         if not CALIBRATOR_PATH.exists():
-            raise FileNotFoundError(
-                f"Calibrator artifact not found: {CALIBRATOR_PATH}"
-            )
+            raise FileNotFoundError(f"Calibrator artifact not found: {CALIBRATOR_PATH}")
         if not METADATA_PATH.exists():
-            raise FileNotFoundError(
-                f"Model metadata not found: {METADATA_PATH}"
-            )
+            raise FileNotFoundError(f"Model metadata not found: {METADATA_PATH}")
 
         self.model = joblib.load(MODEL_PATH)
         self.imputer = joblib.load(IMPUTER_PATH)
         self.calibrator = joblib.load(CALIBRATOR_PATH)
 
-        self.metadata = json.loads(
-            METADATA_PATH.read_text(encoding="utf-8")
-        )
+        self.metadata = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
 
         self.feature_columns = tuple(self.metadata["feature_columns"])
         self.threshold = float(self.metadata["threshold"])
@@ -104,7 +92,6 @@ class OnlineLogisticPredictor(RiskPredictor):
             "MAP": self._map_value(sbp, dbp),
             "Age": float(patient.age),
             "Gender": self._gender_value(patient),
-
             "HR_missing": int(hr is None),
             "O2Sat_missing": int(spo2 is None),
             "Temp_missing": int(temp is None),
@@ -136,9 +123,15 @@ class OnlineLogisticPredictor(RiskPredictor):
                 (vitals.systolic_bp, baseline.baseline_systolic_bp, 0.02),
                 (vitals.diastolic_bp, baseline.baseline_diastolic_bp, 0.02),
             )
-            deviations = [abs(float(a)-float(b))/scale for a,b,scale in pairs if a is not None and b is not None]
+            deviations = [
+                abs(float(a) - float(b)) / scale
+                for a, b, scale in pairs
+                if a is not None and b is not None
+            ]
             if deviations:
-                baseline_adjustment = min(0.05, sum(deviations)/len(deviations)*0.01)
+                baseline_adjustment = min(
+                    0.05, sum(deviations) / len(deviations) * 0.01
+                )
 
         patient = vitals.patient
         if patient is None:
@@ -151,9 +144,7 @@ class OnlineLogisticPredictor(RiskPredictor):
 
         imputed = self.imputer.transform(features)
 
-        raw_probability = float(
-            self.model.predict_proba(imputed)[:, 1][0]
-        )
+        raw_probability = float(self.model.predict_proba(imputed)[:, 1][0])
 
         calibrated_probability = float(
             self.calibrator.predict_proba(
@@ -161,7 +152,9 @@ class OnlineLogisticPredictor(RiskPredictor):
             )[:, 1][0]
         )
 
-        calibrated_probability = float(np.clip(calibrated_probability + baseline_adjustment, 0.0, 1.0))
+        calibrated_probability = float(
+            np.clip(calibrated_probability + baseline_adjustment, 0.0, 1.0)
+        )
 
         if calibrated_probability < 0.3:
             risk_tier = RISK_TIER_LOW
@@ -184,9 +177,7 @@ class OnlineLogisticPredictor(RiskPredictor):
             else:
                 feature_value = float(original_value)
 
-            contribution = float(
-                coefficients[index] * imputed[0][index]
-            )
+            contribution = float(coefficients[index] * imputed[0][index])
 
             contributions.append(
                 FeatureContribution(
@@ -205,12 +196,11 @@ class OnlineLogisticPredictor(RiskPredictor):
                 "DBP": baseline.baseline_diastolic_bp,
             }
             active_baseline_features = {
-                name for name, value in baseline_features.items()
-                if value is not None
+                name for name, value in baseline_features.items() if value is not None
             }
             if active_baseline_features:
-                adjustment_per_feature = (
-                    baseline_adjustment / len(active_baseline_features)
+                adjustment_per_feature = baseline_adjustment / len(
+                    active_baseline_features
                 )
                 contributions = [
                     FeatureContribution(
@@ -235,6 +225,3 @@ class OnlineLogisticPredictor(RiskPredictor):
             risk_tier=risk_tier,
             feature_contributions=contributions,
         )
-
-
-

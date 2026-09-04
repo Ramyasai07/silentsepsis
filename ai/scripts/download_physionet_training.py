@@ -32,10 +32,7 @@ def download_file(url: str, target_path: Path) -> None:
             temp_path.unlink()
 
         try:
-            request = urllib.request.Request(
-                url,
-                headers={"User-Agent": "Mozilla/5.0"}
-            )
+            request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
 
             with urllib.request.urlopen(request, timeout=180) as response:
                 with open(temp_path, "wb") as out:
@@ -50,16 +47,10 @@ def download_file(url: str, target_path: Path) -> None:
                 temp_path.unlink()
 
             if attempt < 3:
-                print(
-                    f"RETRY {attempt}/3 {target_path}: {exc}",
-                    flush=True
-                )
+                print(f"RETRY {attempt}/3 {target_path}: {exc}", flush=True)
                 time.sleep(5)
             else:
-                print(
-                    f"FAILED AFTER 3 ATTEMPTS {target_path}: {exc}",
-                    flush=True
-                )
+                print(f"FAILED AFTER 3 ATTEMPTS {target_path}: {exc}", flush=True)
                 raise
 
 
@@ -71,17 +62,21 @@ for training_set in TRAINING_SETS:
     try:
         index_html = fetch_html(set_url)
     except Exception as exc:
-        failed_downloads.append({"set": training_set, "url": set_url, "error": str(exc)})
+        failed_downloads.append(
+            {"set": training_set, "url": set_url, "error": str(exc)}
+        )
         print(f"FETCH_ERROR {training_set}: {exc}", flush=True)
         continue
 
     psv_links = sorted(set(re.findall(r'href="([^"]+\.psv)"', index_html)))
     if not psv_links:
-        failed_downloads.append({
-            "set": training_set,
-            "url": set_url,
-            "error": "No .psv links found in official directory listing",
-        })
+        failed_downloads.append(
+            {
+                "set": training_set,
+                "url": set_url,
+                "error": "No .psv links found in official directory listing",
+            }
+        )
         print(f"NO_PSV_FILES {training_set}", flush=True)
         continue
 
@@ -98,7 +93,9 @@ for training_set in TRAINING_SETS:
         try:
             download_file(file_url, target_path)
         except Exception as exc:
-            failed_downloads.append({"set": training_set, "url": file_url, "error": str(exc)})
+            failed_downloads.append(
+                {"set": training_set, "url": file_url, "error": str(exc)}
+            )
             print(f"[{index}/{len(psv_links)}] FAILED {file_url}: {exc}", flush=True)
             continue
 

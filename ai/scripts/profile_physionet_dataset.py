@@ -138,8 +138,12 @@ def print_profile(profile: dict) -> None:
     print_section(f"Dataset: {dataset_name}")
     print(f"PSV files: {profile['file_count']}")
     print(f"Total rows: {profile['row_count']}")
-    print(f"Files with at least one SepsisLabel=1: {profile['patients_with_sepsis_one']}")
-    print(f"SepsisLabel distribution: 0={profile['sepsis_zero']}, 1={profile['sepsis_one']}")
+    print(
+        f"Files with at least one SepsisLabel=1: {profile['patients_with_sepsis_one']}"
+    )
+    print(
+        f"SepsisLabel distribution: 0={profile['sepsis_zero']}, 1={profile['sepsis_one']}"
+    )
     if profile["sepsis_zero"] + profile["sepsis_one"] > 0:
         total_labels = profile["sepsis_zero"] + profile["sepsis_one"]
         print(
@@ -152,7 +156,9 @@ def print_profile(profile: dict) -> None:
     print(f"Number of columns: {profile['column_count']}")
 
     if profile["rows_per_file"]:
-        print(f"Rows per file: min={min(profile['rows_per_file'])}, max={max(profile['rows_per_file'])}, mean={sum(profile['rows_per_file']) / len(profile['rows_per_file']):.2f}, median={pd.Series(profile['rows_per_file']).median()}")
+        print(
+            f"Rows per file: min={min(profile['rows_per_file'])}, max={max(profile['rows_per_file'])}, mean={sum(profile['rows_per_file']) / len(profile['rows_per_file']):.2f}, median={pd.Series(profile['rows_per_file']).median()}"
+        )
 
     print("\nMissing value summary by feature:")
     for col in profile["ordered_columns"]:
@@ -217,7 +223,9 @@ def main() -> None:
             f"1={(total_sepsis_one / (total_sepsis_zero + total_sepsis_one)) * 100:.2f}%"
         )
     print(f"Files containing at least one SepsisLabel=1: {patients_with_sepsis_one}")
-    print("Summary complete. No dataset files were read, modified, moved, or rewritten.")
+    print(
+        "Summary complete. No dataset files were read, modified, moved, or rewritten."
+    )
 
 
 if __name__ == "__main__":

@@ -1,5 +1,4 @@
 import pandas as pd
-
 from sepsis_ai.features.trend_features import (
     BASELINE_WINDOW_HOURS,
     engineer_patient_features,
@@ -22,7 +21,9 @@ def test_baseline_and_deviation():
     )
 
     result = engineer_patient_features(patient)
-    assert result["heart_rate_baseline"].iloc[0] == result["heart_rate_baseline"].iloc[1]
+    assert (
+        result["heart_rate_baseline"].iloc[0] == result["heart_rate_baseline"].iloc[1]
+    )
     assert result["heart_rate_deviation"].iloc[-1] > 0
     assert result["heart_rate_pct_deviation"].iloc[-1] > 0
 
@@ -95,9 +96,20 @@ def test_patient_boundary_isolation():
             "target": [0, 0, 0],
         }
     )
-    table = pd.concat([engineer_patient_features(patient_a), engineer_patient_features(patient_b)], ignore_index=True)
-    assert table.loc[table["patient_id"] == "a", "heart_rate_delta"].tolist() == [0.0, 10.0, 10.0]
-    assert table.loc[table["patient_id"] == "b", "heart_rate_delta"].tolist() == [0.0, 2.0, 2.0]
+    table = pd.concat(
+        [engineer_patient_features(patient_a), engineer_patient_features(patient_b)],
+        ignore_index=True,
+    )
+    assert table.loc[table["patient_id"] == "a", "heart_rate_delta"].tolist() == [
+        0.0,
+        10.0,
+        10.0,
+    ]
+    assert table.loc[table["patient_id"] == "b", "heart_rate_delta"].tolist() == [
+        0.0,
+        2.0,
+        2.0,
+    ]
 
 
 def test_zero_baseline_protection():

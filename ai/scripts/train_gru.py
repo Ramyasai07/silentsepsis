@@ -57,7 +57,9 @@ def load_metadata() -> dict:
 
 def load_normalization_stats() -> tuple[np.ndarray, np.ndarray]:
     if not NORMALIZATION_STATS_PATH.exists():
-        raise FileNotFoundError(f"Missing normalization stats: {NORMALIZATION_STATS_PATH}")
+        raise FileNotFoundError(
+            f"Missing normalization stats: {NORMALIZATION_STATS_PATH}"
+        )
 
     with NORMALIZATION_STATS_PATH.open("r", encoding="utf-8") as handle:
         stats = json.load(handle)
@@ -87,15 +89,27 @@ def load_split_data(split_name: str) -> tuple[np.ndarray, np.ndarray]:
     return X, y
 
 
-def verify_sequence_data(X: np.ndarray, y: np.ndarray, split_name: str, sequence_length: int, feature_count: int) -> None:
+def verify_sequence_data(
+    X: np.ndarray,
+    y: np.ndarray,
+    split_name: str,
+    sequence_length: int,
+    feature_count: int,
+) -> None:
     if X.shape[0] != y.shape[0]:
-        raise ValueError(f"{split_name}: X and y sample counts do not match ({X.shape[0]} vs {y.shape[0]})")
+        raise ValueError(
+            f"{split_name}: X and y sample counts do not match ({X.shape[0]} vs {y.shape[0]})"
+        )
     if X.ndim != 3:
         raise ValueError(f"{split_name}: X is not 3-dimensional; shape={X.shape}")
     if X.shape[1] != sequence_length:
-        raise ValueError(f"{split_name}: sequence length mismatch; expected {sequence_length}, found {X.shape[1]}")
+        raise ValueError(
+            f"{split_name}: sequence length mismatch; expected {sequence_length}, found {X.shape[1]}"
+        )
     if X.shape[2] != feature_count:
-        raise ValueError(f"{split_name}: feature count mismatch; expected {feature_count}, found {X.shape[2]}")
+        raise ValueError(
+            f"{split_name}: feature count mismatch; expected {feature_count}, found {X.shape[2]}"
+        )
     if y.size == 0:
         raise ValueError(f"{split_name}: y is empty.")
     if not set(np.unique(y)).issubset({0, 1}):
@@ -121,7 +135,9 @@ def calculate_class_weights(y_train: np.ndarray) -> dict[int, float]:
     positive = int(np.sum(y_train == 1))
     negative = int(np.sum(y_train == 0))
     if positive == 0 or negative == 0:
-        raise ValueError(f"Training labels must contain both classes. Positive={positive}, Negative={negative}")
+        raise ValueError(
+            f"Training labels must contain both classes. Positive={positive}, Negative={negative}"
+        )
 
     total = positive + negative
     weight_for_zero = total / (2.0 * negative)
@@ -162,10 +178,14 @@ def make_dataset_from_memmap(
         tf.TensorSpec(shape=(None, X.shape[1], X.shape[2]), dtype=x_dtype),
         tf.TensorSpec(shape=(None,), dtype=y_dtype),
     )
-    return tf.data.Dataset.from_generator(generator, output_signature=output_signature).prefetch(tf.data.AUTOTUNE)
+    return tf.data.Dataset.from_generator(
+        generator, output_signature=output_signature
+    ).prefetch(tf.data.AUTOTUNE)
 
 
-def evaluate_predictions(y_true: np.ndarray, y_prob: np.ndarray, threshold: float) -> dict:
+def evaluate_predictions(
+    y_true: np.ndarray, y_prob: np.ndarray, threshold: float
+) -> dict:
     y_pred = (y_prob >= threshold).astype(int)
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
     accuracy = accuracy_score(y_true, y_pred)
@@ -222,7 +242,9 @@ def main() -> None:
     train_mean, train_std = load_normalization_stats()
 
     if train_mean.shape[0] != feature_count or train_std.shape[0] != feature_count:
-        raise ValueError("Normalization statistics do not match the expected feature count.")
+        raise ValueError(
+            "Normalization statistics do not match the expected feature count."
+        )
 
     X_train, y_train = load_split_data("train")
     X_val, y_val = load_split_data("validation")
@@ -236,9 +258,21 @@ def main() -> None:
     val_positives, val_negatives = compute_class_counts(y_val)
     test_positives, test_negatives = compute_class_counts(y_test)
 
-    train_dataset = make_dataset_from_memmap(X_train, y_train, BATCH_SIZE, train_mean, train_std, shuffle=True, seed=RANDOM_SEED)
-    val_dataset = make_dataset_from_memmap(X_val, y_val, BATCH_SIZE, train_mean, train_std, shuffle=False)
-    test_dataset = make_dataset_from_memmap(X_test, y_test, BATCH_SIZE, train_mean, train_std, shuffle=False)
+    train_dataset = make_dataset_from_memmap(
+        X_train,
+        y_train,
+        BATCH_SIZE,
+        train_mean,
+        train_std,
+        shuffle=True,
+        seed=RANDOM_SEED,
+    )
+    val_dataset = make_dataset_from_memmap(
+        X_val, y_val, BATCH_SIZE, train_mean, train_std, shuffle=False
+    )
+    test_dataset = make_dataset_from_memmap(
+        X_test, y_test, BATCH_SIZE, train_mean, train_std, shuffle=False
+    )
 
     print("GRU EXPERIMENT: NORMALIZED GRU")
     print("TRAIN:")
@@ -303,7 +337,9 @@ def main() -> None:
     test_metrics = evaluate_predictions(y_test, test_prob, THRESHOLD)
 
     with (MODEL_ROOT / "gru_evaluation.json").open("w", encoding="utf-8") as handle:
-        json.dump({"validation": validation_metrics, "test": test_metrics}, handle, indent=2)
+        json.dump(
+            {"validation": validation_metrics, "test": test_metrics}, handle, indent=2
+        )
 
     test_df = pd.DataFrame(
         {

@@ -62,7 +62,9 @@ def load_processed_split_data(processed_root: Path | str) -> pd.DataFrame:
     combined = pd.concat(chunks, ignore_index=True)
     combined["ICULOS"] = pd.to_numeric(combined["ICULOS"], errors="coerce")
     combined["patient_id"] = combined["patient_id"].astype(str)
-    return combined.sort_values(["split", "patient_id", "ICULOS"], kind="mergesort").reset_index(drop=True)
+    return combined.sort_values(
+        ["split", "patient_id", "ICULOS"], kind="mergesort"
+    ).reset_index(drop=True)
 
 
 def validate_split_manifest(manifest: pd.DataFrame, patient_ids: Iterable[str]) -> None:
@@ -71,14 +73,22 @@ def validate_split_manifest(manifest: pd.DataFrame, patient_ids: Iterable[str]) 
     missing = sorted(observed_ids.difference(manifest_ids))
     extra = sorted(manifest_ids.difference(observed_ids))
     if missing:
-        raise ValueError(f"Processed patient IDs missing from split manifest: {missing[:10]}")
+        raise ValueError(
+            f"Processed patient IDs missing from split manifest: {missing[:10]}"
+        )
     if extra:
-        raise ValueError(f"Split manifest includes IDs not present in processed data: {extra[:10]}")
+        raise ValueError(
+            f"Split manifest includes IDs not present in processed data: {extra[:10]}"
+        )
     if manifest["patient_id"].duplicated().any():
         raise ValueError("Split manifest contains duplicate patient IDs across splits.")
 
 
-def _patient_baseline(series: pd.Series, iculos: pd.Series, baseline_window_hours: int = BASELINE_WINDOW_HOURS) -> float:
+def _patient_baseline(
+    series: pd.Series,
+    iculos: pd.Series,
+    baseline_window_hours: int = BASELINE_WINDOW_HOURS,
+) -> float:
     values = pd.to_numeric(series, errors="coerce")
     iculos_values = pd.to_numeric(iculos, errors="coerce")
     if values.empty:
@@ -103,7 +113,9 @@ def _pct_deviation(current_value: float, baseline_value: float) -> float:
     return float(((current_value - baseline_value) / baseline_value) * 100.0)
 
 
-def _rolling_aggregate(values: pd.Series, window_size: int = ROLLING_WINDOW_SIZE) -> pd.Series:
+def _rolling_aggregate(
+    values: pd.Series, window_size: int = ROLLING_WINDOW_SIZE
+) -> pd.Series:
     rolling = values.rolling(window=window_size, min_periods=1)
     return rolling.mean(), rolling.std(ddof=0)
 
@@ -126,7 +138,9 @@ def engineer_patient_features(patient_df: pd.DataFrame) -> pd.DataFrame:
         result[deviation_col] = values - baseline_value
 
         pct_col = f"{feature_name}_pct_deviation"
-        result[pct_col] = values.apply(lambda value: _pct_deviation(float(value), baseline_value))
+        result[pct_col] = values.apply(
+            lambda value: _pct_deviation(float(value), baseline_value)
+        )
 
         delta_values = values.diff().fillna(0.0)
         delta_col = f"{feature_name}_delta"
@@ -141,7 +155,9 @@ def engineer_patient_features(patient_df: pd.DataFrame) -> pd.DataFrame:
         sbp_values = _safe_numeric(result["SBP"])
         shock_index = pd.Series(0.0, index=result.index, dtype=float)
         valid_mask = sbp_values.notna() & (sbp_values > 0)
-        shock_index.loc[valid_mask] = hr_values.loc[valid_mask] / sbp_values.loc[valid_mask]
+        shock_index.loc[valid_mask] = (
+            hr_values.loc[valid_mask] / sbp_values.loc[valid_mask]
+        )
         result["shock_index"] = shock_index
 
     return result
@@ -159,13 +175,21 @@ def build_feature_table(processed_df: pd.DataFrame) -> pd.DataFrame:
         rows.append(patient_features)
 
     feature_table = pd.concat(rows, ignore_index=True)
-    feature_table = feature_table.sort_values(["split", "patient_id", "ICULOS"], kind="mergesort").reset_index(drop=True)
+    feature_table = feature_table.sort_values(
+        ["split", "patient_id", "ICULOS"], kind="mergesort"
+    ).reset_index(drop=True)
     return feature_table
 
 
 def main() -> pd.DataFrame:
     processed_root = Path(__file__).resolve().parents[3] / "ai" / "data" / "processed"
-    manifest_path = Path(__file__).resolve().parents[3] / "ai" / "data" / "splits" / "patient_split_manifest.csv"
+    manifest_path = (
+        Path(__file__).resolve().parents[3]
+        / "ai"
+        / "data"
+        / "splits"
+        / "patient_split_manifest.csv"
+    )
     frame = load_processed_split_data(processed_root)
     manifest = load_split_manifest(manifest_path)
     validate_split_manifest(manifest, frame["patient_id"].dropna().unique())

@@ -10,13 +10,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import joblib
-import numpy as np
 from sklearn.linear_model import LogisticRegression
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from ai.ml.data_loader import load_processed_dataset
 from ai.ml.metrics import evaluate_probabilities, select_threshold
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]

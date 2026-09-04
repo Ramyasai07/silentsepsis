@@ -79,18 +79,12 @@ def test_online_logistic_trains_serializes_and_reloads(
     )
 
     assert metadata["num_features"] == 15
-    assert metadata["feature_columns"] == list(
-        ONLINE_FEATURE_COLUMNS
-    )
+    assert metadata["feature_columns"] == list(ONLINE_FEATURE_COLUMNS)
 
     assert (artifact_root / "model.joblib").exists()
     assert (artifact_root / "metadata.json").exists()
 
-    saved = json.loads(
-        (artifact_root / "metadata.json").read_text(
-            encoding="utf-8"
-        )
-    )
+    saved = json.loads((artifact_root / "metadata.json").read_text(encoding="utf-8"))
 
     assert saved["num_features"] == 15
     assert saved["model_version"] == "online-logistic-v1"

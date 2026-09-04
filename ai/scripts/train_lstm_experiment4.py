@@ -59,7 +59,9 @@ def load_metadata() -> dict:
 
 def load_normalization_stats() -> tuple[np.ndarray, np.ndarray]:
     if not NORMALIZATION_STATS_PATH.exists():
-        raise FileNotFoundError(f"Missing normalization stats: {NORMALIZATION_STATS_PATH}")
+        raise FileNotFoundError(
+            f"Missing normalization stats: {NORMALIZATION_STATS_PATH}"
+        )
 
     with NORMALIZATION_STATS_PATH.open("r", encoding="utf-8") as handle:
         stats = json.load(handle)
@@ -89,15 +91,27 @@ def load_split_data(split_name: str) -> tuple[np.ndarray, np.ndarray]:
     return X, y
 
 
-def verify_sequence_data(X: np.ndarray, y: np.ndarray, split_name: str, sequence_length: int, feature_count: int) -> None:
+def verify_sequence_data(
+    X: np.ndarray,
+    y: np.ndarray,
+    split_name: str,
+    sequence_length: int,
+    feature_count: int,
+) -> None:
     if X.shape[0] != y.shape[0]:
-        raise ValueError(f"{split_name}: X and y sample counts do not match ({X.shape[0]} vs {y.shape[0]})")
+        raise ValueError(
+            f"{split_name}: X and y sample counts do not match ({X.shape[0]} vs {y.shape[0]})"
+        )
     if X.ndim != 3:
         raise ValueError(f"{split_name}: X is not 3-dimensional; shape={X.shape}")
     if X.shape[1] != sequence_length:
-        raise ValueError(f"{split_name}: sequence length mismatch; expected {sequence_length}, found {X.shape[1]}")
+        raise ValueError(
+            f"{split_name}: sequence length mismatch; expected {sequence_length}, found {X.shape[1]}"
+        )
     if X.shape[2] != feature_count:
-        raise ValueError(f"{split_name}: feature count mismatch; expected {feature_count}, found {X.shape[2]}")
+        raise ValueError(
+            f"{split_name}: feature count mismatch; expected {feature_count}, found {X.shape[2]}"
+        )
     if y.size == 0:
         raise ValueError(f"{split_name}: y is empty.")
     if not set(np.unique(y)).issubset({0, 1}):
@@ -153,10 +167,19 @@ def make_dataset_from_memmap(
         tf.TensorSpec(shape=(None, X.shape[1], X.shape[2]), dtype=x_dtype),
         tf.TensorSpec(shape=(None,), dtype=y_dtype),
     )
-    return tf.data.Dataset.from_generator(generator, output_signature=output_signature).repeat().prefetch(tf.data.AUTOTUNE)
+    return (
+        tf.data.Dataset.from_generator(generator, output_signature=output_signature)
+        .repeat()
+        .prefetch(tf.data.AUTOTUNE)
+    )
 
 
-def binary_focal_loss(y_true: tf.Tensor, y_pred: tf.Tensor, alpha: float = FOCAL_ALPHA, gamma: float = FOCAL_GAMMA) -> tf.Tensor:
+def binary_focal_loss(
+    y_true: tf.Tensor,
+    y_pred: tf.Tensor,
+    alpha: float = FOCAL_ALPHA,
+    gamma: float = FOCAL_GAMMA,
+) -> tf.Tensor:
     y_true = tf.cast(y_true, y_pred.dtype)
     y_pred = tf.clip_by_value(
         y_pred,
@@ -169,7 +192,9 @@ def binary_focal_loss(y_true: tf.Tensor, y_pred: tf.Tensor, alpha: float = FOCAL
     return tf.reduce_mean(loss)
 
 
-def evaluate_predictions(y_true: np.ndarray, y_prob: np.ndarray, threshold: float) -> dict:
+def evaluate_predictions(
+    y_true: np.ndarray, y_prob: np.ndarray, threshold: float
+) -> dict:
     y_pred = (y_prob >= threshold).astype(int)
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
     accuracy = accuracy_score(y_true, y_pred)
@@ -226,7 +251,9 @@ def main() -> None:
     train_mean, train_std = load_normalization_stats()
 
     if train_mean.shape[0] != feature_count or train_std.shape[0] != feature_count:
-        raise ValueError("Normalization statistics do not match the expected feature count.")
+        raise ValueError(
+            "Normalization statistics do not match the expected feature count."
+        )
 
     X_train, y_train = load_split_data("train")
     X_val, y_val = load_split_data("validation")
@@ -237,8 +264,18 @@ def main() -> None:
     train_positives, train_negatives = compute_class_counts(y_train)
     val_positives, val_negatives = compute_class_counts(y_val)
 
-    train_dataset = make_dataset_from_memmap(X_train, y_train, BATCH_SIZE, train_mean, train_std, shuffle=True, seed=RANDOM_SEED)
-    val_dataset = make_dataset_from_memmap(X_val, y_val, BATCH_SIZE, train_mean, train_std, shuffle=False)
+    train_dataset = make_dataset_from_memmap(
+        X_train,
+        y_train,
+        BATCH_SIZE,
+        train_mean,
+        train_std,
+        shuffle=True,
+        seed=RANDOM_SEED,
+    )
+    val_dataset = make_dataset_from_memmap(
+        X_val, y_val, BATCH_SIZE, train_mean, train_std, shuffle=False
+    )
 
     print("EXPERIMENT 4: FOCAL LOSS LSTM")
     print("TRAIN:")
@@ -296,8 +333,16 @@ def main() -> None:
     with history_path.open("w", encoding="utf-8") as handle:
         json.dump(history.history, handle, indent=2)
 
-    best_epoch = int(np.argmax(history.history["val_pr_auc"])) + 1 if "val_pr_auc" in history.history else 1
-    best_pr_auc = float(np.max(history.history["val_pr_auc"])) if "val_pr_auc" in history.history else 0.0
+    best_epoch = (
+        int(np.argmax(history.history["val_pr_auc"])) + 1
+        if "val_pr_auc" in history.history
+        else 1
+    )
+    best_pr_auc = (
+        float(np.max(history.history["val_pr_auc"]))
+        if "val_pr_auc" in history.history
+        else 0.0
+    )
 
     validation_prob = model.predict(
         val_dataset,
@@ -310,17 +355,25 @@ def main() -> None:
     verify_sequence_data(X_test, y_test, "test", sequence_length, feature_count)
     test_positives, test_negatives = compute_class_counts(y_test)
 
-    test_dataset = make_dataset_from_memmap(X_test, y_test, BATCH_SIZE, train_mean, train_std, shuffle=False)
+    test_dataset = make_dataset_from_memmap(
+        X_test, y_test, BATCH_SIZE, train_mean, train_std, shuffle=False
+    )
     test_steps = int(np.ceil(len(y_test) / BATCH_SIZE))
     test_prob = model.predict(
         test_dataset,
         steps=test_steps,
         verbose=0,
-    ).reshape(-1)[: len(y_test)]
+    ).reshape(
+        -1
+    )[: len(y_test)]
     test_metrics = evaluate_predictions(y_test, test_prob, THRESHOLD)
 
-    with (MODEL_ROOT / "lstm_experiment4_evaluation.json").open("w", encoding="utf-8") as handle:
-        json.dump({"validation": validation_metrics, "test": test_metrics}, handle, indent=2)
+    with (MODEL_ROOT / "lstm_experiment4_evaluation.json").open(
+        "w", encoding="utf-8"
+    ) as handle:
+        json.dump(
+            {"validation": validation_metrics, "test": test_metrics}, handle, indent=2
+        )
 
     test_df = pd.DataFrame(
         {

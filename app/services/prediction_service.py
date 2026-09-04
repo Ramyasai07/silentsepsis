@@ -47,7 +47,11 @@ class PredictionService:
             raise PatientNotFoundError()
 
         if vital_reading_id is not None:
-            vital = db.scalar(select(VitalReading).where(VitalReading.id == vital_reading_id).options(selectinload(VitalReading.patient)))
+            vital = db.scalar(
+                select(VitalReading)
+                .where(VitalReading.id == vital_reading_id)
+                .options(selectinload(VitalReading.patient))
+            )
             if vital is None or vital.patient_id != patient_id:
                 raise VitalReadingNotFoundError()
         else:

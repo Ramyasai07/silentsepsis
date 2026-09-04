@@ -9,7 +9,15 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from sklearn.metrics import accuracy_score, average_precision_score, confusion_matrix, f1_score, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SEQUENCE_ROOT = REPO_ROOT / "ai" / "data" / "sequences"
@@ -18,7 +26,25 @@ SEQUENCE_METADATA_PATH = SEQUENCE_ROOT / "sequence_metadata.json"
 NORMALIZATION_STATS_PATH = MODEL_ROOT / "lstm_normalization_stats.json"
 MODEL_PATH = MODEL_ROOT / "lstm_best.keras"
 
-VALIDATION_THRESHOLDS = [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90]
+VALIDATION_THRESHOLDS = [
+    0.10,
+    0.15,
+    0.20,
+    0.25,
+    0.30,
+    0.35,
+    0.40,
+    0.45,
+    0.50,
+    0.55,
+    0.60,
+    0.65,
+    0.70,
+    0.75,
+    0.80,
+    0.85,
+    0.90,
+]
 BATCH_SIZE = 256
 
 
@@ -36,7 +62,9 @@ def load_metadata() -> dict:
 
 def load_normalization_stats() -> tuple[np.ndarray, np.ndarray, list[str], int, int]:
     if not NORMALIZATION_STATS_PATH.exists():
-        raise FileNotFoundError(f"Missing normalization stats: {NORMALIZATION_STATS_PATH}")
+        raise FileNotFoundError(
+            f"Missing normalization stats: {NORMALIZATION_STATS_PATH}"
+        )
 
     with NORMALIZATION_STATS_PATH.open("r", encoding="utf-8") as handle:
         stats = json.load(handle)
@@ -48,7 +76,9 @@ def load_normalization_stats() -> tuple[np.ndarray, np.ndarray, list[str], int, 
     number_of_features = int(stats["number_of_features"])
 
     if train_mean.shape[0] != number_of_features:
-        raise ValueError("Normalization stats length does not match number_of_features.")
+        raise ValueError(
+            "Normalization stats length does not match number_of_features."
+        )
     if train_std.shape[0] != number_of_features:
         raise ValueError("Normalization std length does not match number_of_features.")
 
@@ -75,15 +105,27 @@ def load_memmap_split(split_name: str) -> tuple[np.ndarray, np.ndarray]:
     return X, y
 
 
-def verify_split(X: np.ndarray, y: np.ndarray, split_name: str, sequence_length: int, feature_count: int) -> None:
+def verify_split(
+    X: np.ndarray,
+    y: np.ndarray,
+    split_name: str,
+    sequence_length: int,
+    feature_count: int,
+) -> None:
     if X.shape[0] != y.shape[0]:
-        raise ValueError(f"{split_name}: X and y sample counts do not match ({X.shape[0]} vs {y.shape[0]})")
+        raise ValueError(
+            f"{split_name}: X and y sample counts do not match ({X.shape[0]} vs {y.shape[0]})"
+        )
     if X.ndim != 3:
         raise ValueError(f"{split_name}: X is not 3-dimensional; shape={X.shape}")
     if X.shape[1] != sequence_length:
-        raise ValueError(f"{split_name}: sequence length mismatch; expected {sequence_length}, found {X.shape[1]}")
+        raise ValueError(
+            f"{split_name}: sequence length mismatch; expected {sequence_length}, found {X.shape[1]}"
+        )
     if X.shape[2] != feature_count:
-        raise ValueError(f"{split_name}: feature count mismatch; expected {feature_count}, found {X.shape[2]}")
+        raise ValueError(
+            f"{split_name}: feature count mismatch; expected {feature_count}, found {X.shape[2]}"
+        )
     if y.size == 0:
         raise ValueError(f"{split_name}: y is empty.")
     if not set(np.unique(y)).issubset({0, 1}):
@@ -104,7 +146,9 @@ def normalize_batch(batch: np.ndarray, mean: np.ndarray, std: np.ndarray) -> np.
     return (batch - mean) / std
 
 
-def predict_probabilities(model: tf.keras.Model, X: np.ndarray, mean: np.ndarray, std: np.ndarray) -> np.ndarray:
+def predict_probabilities(
+    model: tf.keras.Model, X: np.ndarray, mean: np.ndarray, std: np.ndarray
+) -> np.ndarray:
     probabilities = []
     num_samples = X.shape[0]
 
@@ -118,7 +162,9 @@ def predict_probabilities(model: tf.keras.Model, X: np.ndarray, mean: np.ndarray
     return np.concatenate(probabilities, axis=0)
 
 
-def compute_threshold_metrics(y_true: np.ndarray, y_prob: np.ndarray, threshold: float) -> dict:
+def compute_threshold_metrics(
+    y_true: np.ndarray, y_prob: np.ndarray, threshold: float
+) -> dict:
     y_pred = (y_prob >= threshold).astype(int)
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
 
@@ -136,7 +182,13 @@ def compute_threshold_metrics(y_true: np.ndarray, y_prob: np.ndarray, threshold:
     return metrics
 
 
-def evaluate_model(model: tf.keras.Model, X: np.ndarray, y: np.ndarray, mean: np.ndarray, std: np.ndarray) -> tuple[np.ndarray, dict]:
+def evaluate_model(
+    model: tf.keras.Model,
+    X: np.ndarray,
+    y: np.ndarray,
+    mean: np.ndarray,
+    std: np.ndarray,
+) -> tuple[np.ndarray, dict]:
     probabilities = predict_probabilities(model, X, mean, std)
     metrics = {
         "roc_auc": float(roc_auc_score(y, probabilities)),
@@ -153,7 +205,9 @@ def main() -> None:
 
     train_mean, train_std, feature_names, _, _ = load_normalization_stats()
     if train_mean.shape[0] != feature_count or train_std.shape[0] != feature_count:
-        raise ValueError("Normalization statistics do not match the expected feature count.")
+        raise ValueError(
+            "Normalization statistics do not match the expected feature count."
+        )
 
     if not MODEL_PATH.exists():
         raise FileNotFoundError(f"Missing trained model: {MODEL_PATH}")
@@ -178,9 +232,13 @@ def main() -> None:
         metrics = compute_threshold_metrics(y_val, val_probabilities, threshold)
         threshold_rows.append(metrics)
 
-        print(f"  threshold={threshold:.2f} | precision={metrics['precision']:.4f} | recall={metrics['recall']:.4f} | F1={metrics['f1_score']:.4f}")
+        print(
+            f"  threshold={threshold:.2f} | precision={metrics['precision']:.4f} | recall={metrics['recall']:.4f} | F1={metrics['f1_score']:.4f}"
+        )
 
-        if metrics["f1_score"] > best_f1 or (np.isclose(metrics["f1_score"], best_f1) and metrics["recall"] > best_recall):
+        if metrics["f1_score"] > best_f1 or (
+            np.isclose(metrics["f1_score"], best_f1) and metrics["recall"] > best_recall
+        ):
             best_f1 = metrics["f1_score"]
             best_recall = metrics["recall"]
             best_row = metrics
@@ -189,45 +247,63 @@ def main() -> None:
         raise ValueError("No validation threshold could be selected.")
 
     selected_threshold = float(best_row["threshold"])
-    selected_threshold_metrics = compute_threshold_metrics(y_val, val_probabilities, selected_threshold)
+    selected_threshold_metrics = compute_threshold_metrics(
+        y_val, val_probabilities, selected_threshold
+    )
 
     X_test, y_test = load_memmap_split("test")
     verify_split(X_test, y_test, "test", sequence_length, feature_count)
 
-    test_probabilities, test_threshold_independent = evaluate_model(model, X_test, y_test, train_mean, train_std)
-    test_threshold_metrics = compute_threshold_metrics(y_test, test_probabilities, selected_threshold)
+    test_probabilities, test_threshold_independent = evaluate_model(
+        model, X_test, y_test, train_mean, train_std
+    )
+    test_threshold_metrics = compute_threshold_metrics(
+        y_test, test_probabilities, selected_threshold
+    )
     experiment2_baseline = compute_threshold_metrics(y_test, test_probabilities, 0.50)
 
     print(f"Test samples: {len(y_test)}")
 
     print(f"\nSELECTED THRESHOLD: {selected_threshold:.2f}")
-    print(f"VALIDATION RESULTS: precision={selected_threshold_metrics['precision']:.4f}, recall={selected_threshold_metrics['recall']:.4f}, F1={selected_threshold_metrics['f1_score']:.4f}")
-    print(f"TEST RESULTS: threshold={selected_threshold:.2f}, precision={test_threshold_metrics['precision']:.4f}, recall={test_threshold_metrics['recall']:.4f}, F1={test_threshold_metrics['f1_score']:.4f}")
+    print(
+        f"VALIDATION RESULTS: precision={selected_threshold_metrics['precision']:.4f}, recall={selected_threshold_metrics['recall']:.4f}, F1={selected_threshold_metrics['f1_score']:.4f}"
+    )
+    print(
+        f"TEST RESULTS: threshold={selected_threshold:.2f}, precision={test_threshold_metrics['precision']:.4f}, recall={test_threshold_metrics['recall']:.4f}, F1={test_threshold_metrics['f1_score']:.4f}"
+    )
 
     threshold_df = pd.DataFrame(threshold_rows)
-    threshold_df = threshold_df[[
-        "threshold",
-        "true_positives",
-        "true_negatives",
-        "false_positives",
-        "false_negatives",
-        "accuracy",
-        "precision",
-        "recall",
-        "f1_score",
-    ]]
+    threshold_df = threshold_df[
+        [
+            "threshold",
+            "true_positives",
+            "true_negatives",
+            "false_positives",
+            "false_negatives",
+            "accuracy",
+            "precision",
+            "recall",
+            "f1_score",
+        ]
+    ]
     threshold_df.to_csv(MODEL_ROOT / "lstm_threshold_results.csv", index=False)
 
     analysis_payload = {
         "selected_threshold": float(selected_threshold),
         "validation_metrics_at_selected_threshold": selected_threshold_metrics,
         "test_metrics_at_selected_threshold": test_threshold_metrics,
-        "threshold_independent_test_roc_auc": float(test_threshold_independent["roc_auc"]),
-        "threshold_independent_test_pr_auc": float(test_threshold_independent["pr_auc"]),
+        "threshold_independent_test_roc_auc": float(
+            test_threshold_independent["roc_auc"]
+        ),
+        "threshold_independent_test_pr_auc": float(
+            test_threshold_independent["pr_auc"]
+        ),
         "experiment2_baseline_threshold": 0.50,
         "experiment2_baseline_test_metrics": experiment2_baseline,
     }
-    with (MODEL_ROOT / "lstm_threshold_analysis.json").open("w", encoding="utf-8") as handle:
+    with (MODEL_ROOT / "lstm_threshold_analysis.json").open(
+        "w", encoding="utf-8"
+    ) as handle:
         json.dump(analysis_payload, handle, indent=2)
 
     print("\nCOMPARISON")

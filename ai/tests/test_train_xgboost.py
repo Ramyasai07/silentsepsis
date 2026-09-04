@@ -15,8 +15,22 @@ def _write_dataset(data_root: Path) -> None:
         json.dumps(metadata), encoding="utf-8"
     )
     frames = {
-        "train": pd.DataFrame({"patient_id": ["p1", "p2", "p3", "p4"], "feature_1": [0, 0, 1, 1], "feature_2": [0, 1, 0, 1], "target": [0, 0, 1, 1]}),
-        "validation": pd.DataFrame({"patient_id": ["p5", "p6", "p7", "p8"], "feature_1": [0, 0, 1, 1], "feature_2": [0, 1, 0, 1], "target": [0, 0, 1, 1]}),
+        "train": pd.DataFrame(
+            {
+                "patient_id": ["p1", "p2", "p3", "p4"],
+                "feature_1": [0, 0, 1, 1],
+                "feature_2": [0, 1, 0, 1],
+                "target": [0, 0, 1, 1],
+            }
+        ),
+        "validation": pd.DataFrame(
+            {
+                "patient_id": ["p5", "p6", "p7", "p8"],
+                "feature_1": [0, 0, 1, 1],
+                "feature_2": [0, 1, 0, 1],
+                "target": [0, 0, 1, 1],
+            }
+        ),
     }
     for split, frame in frames.items():
         frame.to_csv(data_root / f"{split}.csv", index=False)
@@ -39,7 +53,9 @@ def test_loader_can_select_train_and_validation_without_test(tmp_path: Path) -> 
         load_processed_dataset(data_root, split_names=("train", "validation"))
 
 
-@pytest.mark.skipif(train_xgboost.XGBClassifier is None, reason="xgboost is not installed")
+@pytest.mark.skipif(
+    train_xgboost.XGBClassifier is None, reason="xgboost is not installed"
+)
 def test_xgboost_training_writes_reloadable_artifact(tmp_path: Path) -> None:
     _write_dataset(tmp_path / "processed")
 

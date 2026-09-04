@@ -17,12 +17,14 @@ def _write_validation_data(data_root: Path) -> None:
         json.dumps({"feature_columns": features, "num_features": 2}),
         encoding="utf-8",
     )
-    frame = pd.DataFrame({
-        "patient_id": ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"],
-        "feature_1": [0, 0, 1, 1, 0, 0, 1, 1],
-        "feature_2": [0, 1, 0, 1, 0, 1, 0, 1],
-        "target": [0, 0, 1, 1, 0, 0, 1, 1],
-    })
+    frame = pd.DataFrame(
+        {
+            "patient_id": ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"],
+            "feature_1": [0, 0, 1, 1, 0, 0, 1, 1],
+            "feature_2": [0, 1, 0, 1, 0, 1, 0, 1],
+            "target": [0, 0, 1, 1, 0, 0, 1, 1],
+        }
+    )
     frame.to_csv(data_root / "validation.csv", index=False)
 
 
@@ -41,7 +43,12 @@ def test_calibrated_artifact_reloads_and_preserves_schema(tmp_path: Path) -> Non
     model.fit(features, np.array([0, 0, 1, 1]))
     model.save_model(source_root / "model.json")
     (source_root / "metadata.json").write_text(
-        json.dumps({"model_version": "xgboost-v1", "feature_columns": ["feature_1", "feature_2"]}),
+        json.dumps(
+            {
+                "model_version": "xgboost-v1",
+                "feature_columns": ["feature_1", "feature_2"],
+            }
+        ),
         encoding="utf-8",
     )
     data_root = tmp_path / "processed"
@@ -53,7 +60,10 @@ def test_calibrated_artifact_reloads_and_preserves_schema(tmp_path: Path) -> Non
 
     assert probabilities.shape == (2,)
     assert metadata["feature_columns"] == ["feature_1", "feature_2"]
-    assert metadata["threshold"] == metadata["validation_metrics"]["calibrated"]["threshold"]
+    assert (
+        metadata["threshold"]
+        == metadata["validation_metrics"]["calibrated"]["threshold"]
+    )
 
 
 def test_platt_calibrator_generates_reloadable_probabilities(tmp_path: Path) -> None:

@@ -19,7 +19,6 @@ from sklearn.metrics import (
     average_precision_score,
     confusion_matrix,
     f1_score,
-    precision_recall_curve,
     precision_score,
     recall_score,
     roc_auc_score,
@@ -80,15 +79,27 @@ def load_split_data(split_name: str) -> tuple[np.ndarray, np.ndarray]:
     return X, y
 
 
-def verify_sequence_data(X: np.ndarray, y: np.ndarray, split_name: str, sequence_length: int, feature_count: int) -> None:
+def verify_sequence_data(
+    X: np.ndarray,
+    y: np.ndarray,
+    split_name: str,
+    sequence_length: int,
+    feature_count: int,
+) -> None:
     if X.shape[0] != y.shape[0]:
-        raise ValueError(f"{split_name}: X and y sample counts do not match ({X.shape[0]} vs {y.shape[0]})")
+        raise ValueError(
+            f"{split_name}: X and y sample counts do not match ({X.shape[0]} vs {y.shape[0]})"
+        )
     if X.ndim != 3:
         raise ValueError(f"{split_name}: X is not 3-dimensional; shape={X.shape}")
     if X.shape[1] != sequence_length:
-        raise ValueError(f"{split_name}: sequence length mismatch; expected {sequence_length}, found {X.shape[1]}")
+        raise ValueError(
+            f"{split_name}: sequence length mismatch; expected {sequence_length}, found {X.shape[1]}"
+        )
     if X.shape[2] != feature_count:
-        raise ValueError(f"{split_name}: feature count mismatch; expected {feature_count}, found {X.shape[2]}")
+        raise ValueError(
+            f"{split_name}: feature count mismatch; expected {feature_count}, found {X.shape[2]}"
+        )
     if y.size == 0:
         raise ValueError(f"{split_name}: y is empty.")
     if not set(np.unique(y)).issubset({0, 1}):
@@ -105,7 +116,9 @@ def verify_sequence_data(X: np.ndarray, y: np.ndarray, split_name: str, sequence
             raise ValueError(f"{split_name}: X contains infinite values")
 
 
-def compute_training_statistics(X_train: np.ndarray, feature_count: int) -> tuple[np.ndarray, np.ndarray, int]:
+def compute_training_statistics(
+    X_train: np.ndarray, feature_count: int
+) -> tuple[np.ndarray, np.ndarray, int]:
     count = 0
     feature_sums = np.zeros(feature_count, dtype=np.float64)
     feature_sumsq = np.zeros(feature_count, dtype=np.float64)
@@ -120,7 +133,9 @@ def compute_training_statistics(X_train: np.ndarray, feature_count: int) -> tupl
         count += chunk_flat.shape[0]
 
     if count == 0:
-        raise ValueError("Training data is empty; cannot compute normalization statistics.")
+        raise ValueError(
+            "Training data is empty; cannot compute normalization statistics."
+        )
 
     means = feature_sums / count
     variances = feature_sumsq / count - np.square(means)
@@ -134,7 +149,13 @@ def compute_training_statistics(X_train: np.ndarray, feature_count: int) -> tupl
     return means, stds, zero_variance_count
 
 
-def save_normalization_stats(feature_names: list[str], means: np.ndarray, stds: np.ndarray, sequence_length: int, feature_count: int) -> None:
+def save_normalization_stats(
+    feature_names: list[str],
+    means: np.ndarray,
+    stds: np.ndarray,
+    sequence_length: int,
+    feature_count: int,
+) -> None:
     stats_path = MODEL_ROOT / "lstm_normalization_stats.json"
     payload = {
         "feature_names": feature_names,
@@ -151,7 +172,9 @@ def calculate_class_weights(y_train: np.ndarray) -> dict[int, float]:
     positive = int(np.sum(y_train == 1))
     negative = int(np.sum(y_train == 0))
     if positive == 0 or negative == 0:
-        raise ValueError(f"Training labels must contain both classes. Positive={positive}, Negative={negative}")
+        raise ValueError(
+            f"Training labels must contain both classes. Positive={positive}, Negative={negative}"
+        )
 
     total = positive + negative
     weight_for_zero = total / (2.0 * negative)
@@ -195,7 +218,9 @@ def make_dataset_from_memmap(
         tf.TensorSpec(shape=(None, X.shape[1], X.shape[2]), dtype=x_dtype),
         tf.TensorSpec(shape=(None,), dtype=y_dtype),
     )
-    return tf.data.Dataset.from_generator(generator, output_signature=output_signature).prefetch(tf.data.AUTOTUNE)
+    return tf.data.Dataset.from_generator(
+        generator, output_signature=output_signature
+    ).prefetch(tf.data.AUTOTUNE)
 
 
 def compute_class_counts(y: np.ndarray) -> tuple[int, int]:
@@ -204,7 +229,9 @@ def compute_class_counts(y: np.ndarray) -> tuple[int, int]:
     return positives, negatives
 
 
-def evaluate_predictions(y_true: np.ndarray, y_prob: np.ndarray, threshold: float) -> dict:
+def evaluate_predictions(
+    y_true: np.ndarray, y_prob: np.ndarray, threshold: float
+) -> dict:
     y_pred = (y_prob >= threshold).astype(int)
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
     accuracy = accuracy_score(y_true, y_pred)
@@ -267,27 +294,57 @@ def main() -> None:
     verify_sequence_data(X_val, y_val, "validation", sequence_length, feature_count)
     verify_sequence_data(X_test, y_test, "test", sequence_length, feature_count)
 
-    if X_train.shape[2] != feature_count or X_val.shape[2] != feature_count or X_test.shape[2] != feature_count:
+    if (
+        X_train.shape[2] != feature_count
+        or X_val.shape[2] != feature_count
+        or X_test.shape[2] != feature_count
+    ):
         raise ValueError("Sequence feature counts are not consistent with metadata.")
 
-    if X_train.shape[1] != sequence_length or X_val.shape[1] != sequence_length or X_test.shape[1] != sequence_length:
+    if (
+        X_train.shape[1] != sequence_length
+        or X_val.shape[1] != sequence_length
+        or X_test.shape[1] != sequence_length
+    ):
         raise ValueError("Sequence lengths are not consistent across splits.")
 
-    for split_name, y in {"train": y_train, "validation": y_val, "test": y_test}.items():
+    for split_name, y in {
+        "train": y_train,
+        "validation": y_val,
+        "test": y_test,
+    }.items():
         positives, negatives = compute_class_counts(y)
         if positives == 0 or negatives == 0:
-            raise ValueError(f"{split_name}: positive class is missing or negative class is missing.")
+            raise ValueError(
+                f"{split_name}: positive class is missing or negative class is missing."
+            )
 
     train_positives, train_negatives = compute_class_counts(y_train)
     val_positives, val_negatives = compute_class_counts(y_val)
     test_positives, test_negatives = compute_class_counts(y_test)
 
-    train_mean, train_std, zero_variance_features = compute_training_statistics(X_train, feature_count)
-    save_normalization_stats(feature_names, train_mean, train_std, sequence_length, feature_count)
+    train_mean, train_std, zero_variance_features = compute_training_statistics(
+        X_train, feature_count
+    )
+    save_normalization_stats(
+        feature_names, train_mean, train_std, sequence_length, feature_count
+    )
 
-    train_dataset = make_dataset_from_memmap(X_train, y_train, BATCH_SIZE, train_mean, train_std, shuffle=True, seed=RANDOM_SEED)
-    val_dataset = make_dataset_from_memmap(X_val, y_val, BATCH_SIZE, train_mean, train_std, shuffle=False)
-    test_dataset = make_dataset_from_memmap(X_test, y_test, BATCH_SIZE, train_mean, train_std, shuffle=False)
+    train_dataset = make_dataset_from_memmap(
+        X_train,
+        y_train,
+        BATCH_SIZE,
+        train_mean,
+        train_std,
+        shuffle=True,
+        seed=RANDOM_SEED,
+    )
+    val_dataset = make_dataset_from_memmap(
+        X_val, y_val, BATCH_SIZE, train_mean, train_std, shuffle=False
+    )
+    test_dataset = make_dataset_from_memmap(
+        X_test, y_test, BATCH_SIZE, train_mean, train_std, shuffle=False
+    )
 
     print("EXPERIMENT 2: NORMALIZED LSTM")
     print("TRAIN:")
@@ -350,8 +407,16 @@ def main() -> None:
     with history_path.open("w", encoding="utf-8") as handle:
         json.dump(history.history, handle, indent=2)
 
-    best_epoch = int(np.argmax(history.history["val_pr_auc"])) + 1 if "val_pr_auc" in history.history else 1
-    best_pr_auc = float(np.max(history.history["val_pr_auc"])) if "val_pr_auc" in history.history else 0.0
+    best_epoch = (
+        int(np.argmax(history.history["val_pr_auc"])) + 1
+        if "val_pr_auc" in history.history
+        else 1
+    )
+    best_pr_auc = (
+        float(np.max(history.history["val_pr_auc"]))
+        if "val_pr_auc" in history.history
+        else 0.0
+    )
 
     validation_prob = model.predict(val_dataset, verbose=0).reshape(-1)
     test_prob = model.predict(test_dataset, verbose=0).reshape(-1)
@@ -360,7 +425,9 @@ def main() -> None:
     test_metrics = evaluate_predictions(y_test, test_prob, THRESHOLD)
 
     with (MODEL_ROOT / "lstm_evaluation.json").open("w", encoding="utf-8") as handle:
-        json.dump({"validation": validation_metrics, "test": test_metrics}, handle, indent=2)
+        json.dump(
+            {"validation": validation_metrics, "test": test_metrics}, handle, indent=2
+        )
 
     test_df = pd.DataFrame(
         {

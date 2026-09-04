@@ -110,8 +110,10 @@ def validate_dataset() -> tuple[bool, list[str], dict[str, int]]:
 
 def main() -> None:
     print("PhysioNet Challenge 2019 training dataset validation")
-    print(f"Expected counts: training_setA={EXPECTED_COUNTS['training_setA']}, "
-          f"training_setB={EXPECTED_COUNTS['training_setB']}, total={EXPECTED_TOTAL}")
+    print(
+        f"Expected counts: training_setA={EXPECTED_COUNTS['training_setA']}, "
+        f"training_setB={EXPECTED_COUNTS['training_setB']}, total={EXPECTED_TOTAL}"
+    )
     print(f"Data location: {RAW_ROOT}\n")
 
     passed, issues, counts = validate_dataset()
@@ -124,7 +126,9 @@ def main() -> None:
             print(f"- {issue}")
     else:
         print("PASS")
-        print("No empty files, missing headers, structure issues, or count mismatches detected.")
+        print(
+            "No empty files, missing headers, structure issues, or count mismatches detected."
+        )
 
     print("\nFinal counts:")
     for dataset_name in ("training_setA", "training_setB"):

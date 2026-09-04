@@ -57,9 +57,13 @@ def build_patient_labels(patient_df: pd.DataFrame) -> list[dict]:
 
     patient_df = patient_df.copy()
     patient_df["ICULOS"] = pd.to_numeric(patient_df["ICULOS"], errors="coerce")
-    patient_df["SepsisLabel"] = pd.to_numeric(patient_df["SepsisLabel"], errors="coerce")
+    patient_df["SepsisLabel"] = pd.to_numeric(
+        patient_df["SepsisLabel"], errors="coerce"
+    )
 
-    patient_df = patient_df.sort_values("ICULOS", kind="mergesort").reset_index(drop=True)
+    patient_df = patient_df.sort_values("ICULOS", kind="mergesort").reset_index(
+        drop=True
+    )
     patient_df = patient_df[patient_df["ICULOS"].notna()].copy()
 
     patient_labels: list[dict] = []
@@ -110,7 +114,9 @@ def summarize_split(split_name: str, manifest: pd.DataFrame) -> dict:
         file_path = REPO_ROOT / row["file_path"]
 
         if not file_path.exists():
-            raise FileNotFoundError(f"Missing patient file for {patient_id}: {file_path}")
+            raise FileNotFoundError(
+                f"Missing patient file for {patient_id}: {file_path}"
+            )
 
         patient_df = read_patient_file(file_path)
         labels = build_patient_labels(patient_df)
@@ -130,7 +136,9 @@ def summarize_split(split_name: str, manifest: pd.DataFrame) -> dict:
 def main() -> None:
     print("Early sepsis prediction label definition")
     print("Target: use the official PhysioNet SepsisLabel semantics directly.")
-    print("PhysioNet already labels the 6-hour pre-onset warning window with SepsisLabel=1.")
+    print(
+        "PhysioNet already labels the 6-hour pre-onset warning window with SepsisLabel=1."
+    )
     print(f"Data root: {RAW_ROOT}")
     print(f"Split manifest: {SPLIT_MANIFEST}\n")
 
@@ -147,8 +155,12 @@ def main() -> None:
         print()
 
     total_created = sum(summary["total_labels"] for summary in split_summary.values())
-    total_positive = sum(summary["positive_labels"] for summary in split_summary.values())
-    total_negative = sum(summary["negative_labels"] for summary in split_summary.values())
+    total_positive = sum(
+        summary["positive_labels"] for summary in split_summary.values()
+    )
+    total_negative = sum(
+        summary["negative_labels"] for summary in split_summary.values()
+    )
 
     print("FINAL SUMMARY")
     print(f"Total labeled rows created: {total_created}")

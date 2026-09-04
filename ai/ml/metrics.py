@@ -11,8 +11,8 @@ from sklearn.metrics import (
     brier_score_loss,
     confusion_matrix,
     f1_score,
-    precision_score,
     precision_recall_curve,
+    precision_score,
     recall_score,
     roc_auc_score,
 )
@@ -24,7 +24,9 @@ class ThresholdSelection:
     validation_f1: float
 
 
-def select_threshold(y_true: np.ndarray, probabilities: np.ndarray) -> ThresholdSelection:
+def select_threshold(
+    y_true: np.ndarray, probabilities: np.ndarray
+) -> ThresholdSelection:
     precision, recall, thresholds = precision_recall_curve(y_true, probabilities)
     f1_scores = np.divide(
         2 * precision[:-1] * recall[:-1],
@@ -33,7 +35,9 @@ def select_threshold(y_true: np.ndarray, probabilities: np.ndarray) -> Threshold
         where=(precision[:-1] + recall[:-1]) != 0,
     )
     best_index = int(np.argmax(f1_scores))
-    return ThresholdSelection(float(thresholds[best_index]), float(f1_scores[best_index]))
+    return ThresholdSelection(
+        float(thresholds[best_index]), float(f1_scores[best_index])
+    )
 
 
 def evaluate_probabilities(

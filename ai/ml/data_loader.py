@@ -10,7 +10,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-
 SPLIT_NAMES = ("train", "validation", "test")
 
 
@@ -61,7 +60,9 @@ def load_processed_dataset(
             )
         if frame["patient_id"].isna().any():
             raise ValueError(f"{split_name}: patient_id must be present")
-        if frame["target"].isna().any() or not set(frame["target"].unique()).issubset({0, 1}):
+        if frame["target"].isna().any() or not set(frame["target"].unique()).issubset(
+            {0, 1}
+        ):
             raise ValueError(f"{split_name}: target must contain only 0 and 1")
         if frame[list(feature_columns)].isna().any().any():
             raise ValueError(f"{split_name}: feature values contain NaN")

@@ -61,7 +61,9 @@ def load_metadata() -> dict:
 
 def load_normalization_stats() -> tuple[np.ndarray, np.ndarray]:
     if not NORMALIZATION_STATS_PATH.exists():
-        raise FileNotFoundError(f"Missing normalization stats: {NORMALIZATION_STATS_PATH}")
+        raise FileNotFoundError(
+            f"Missing normalization stats: {NORMALIZATION_STATS_PATH}"
+        )
 
     with NORMALIZATION_STATS_PATH.open("r", encoding="utf-8") as handle:
         stats = json.load(handle)
@@ -91,15 +93,36 @@ def load_test_data() -> tuple[np.ndarray, np.ndarray]:
     return X, y
 
 
-def verify_split(X: np.ndarray, y: np.ndarray, split_name: str, sequence_length: int, feature_count: int) -> None:
+def verify_split(
+    X: np.ndarray,
+    y: np.ndarray,
+    split_name: str,
+    sequence_length: int,
+    feature_count: int,
+) -> None:
     if X.shape[0] != y.shape[0]:
-        raise ValueError(f"{split_name}: X and y sample counts do not match ({X.shape[0]} vs {y.shape[0]})")
+        raise ValueError(
+            (
+                f"{split_name}: X and y sample counts do not match "
+                f"({X.shape[0]} vs {y.shape[0]})"
+            )
+        )
     if X.ndim != 3:
         raise ValueError(f"{split_name}: X is not 3-dimensional; shape={X.shape}")
     if X.shape[1] != sequence_length:
-        raise ValueError(f"{split_name}: sequence length mismatch; expected {sequence_length}, found {X.shape[1]}")
+        raise ValueError(
+            (
+                f"{split_name}: sequence length mismatch; expected "
+                f"{sequence_length}, found {X.shape[1]}"
+            )
+        )
     if X.shape[2] != feature_count:
-        raise ValueError(f"{split_name}: feature count mismatch; expected {feature_count}, found {X.shape[2]}")
+        raise ValueError(
+            (
+                f"{split_name}: feature count mismatch; expected "
+                f"{feature_count}, found {X.shape[2]}"
+            )
+        )
     if y.size == 0:
         raise ValueError(f"{split_name}: y is empty.")
     if not set(np.unique(y)).issubset({0, 1}):
@@ -116,7 +139,9 @@ def verify_split(X: np.ndarray, y: np.ndarray, split_name: str, sequence_length:
             raise ValueError(f"{split_name}: X contains infinite values")
 
 
-def predict_probabilities(model: tf.keras.Model, X: np.ndarray, mean: np.ndarray, std: np.ndarray) -> np.ndarray:
+def predict_probabilities(
+    model: tf.keras.Model, X: np.ndarray, mean: np.ndarray, std: np.ndarray
+) -> np.ndarray:
     probabilities = []
     total_samples = X.shape[0]
 
@@ -133,7 +158,9 @@ def predict_probabilities(model: tf.keras.Model, X: np.ndarray, mean: np.ndarray
     return np.concatenate(probabilities, axis=0)
 
 
-def compute_threshold_metrics(y_true: np.ndarray, y_prob: np.ndarray, threshold: float) -> dict:
+def compute_threshold_metrics(
+    y_true: np.ndarray, y_prob: np.ndarray, threshold: float
+) -> dict:
     y_pred = (y_prob >= threshold).astype(int)
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
 
@@ -162,10 +189,18 @@ def summarize_probability_distribution(y_true: np.ndarray, y_prob: np.ndarray) -
         "positive_sequences": int(np.sum(positive_mask)),
         "negative_sequences": int(np.sum(negative_mask)),
         "positive_percentage": float(np.mean(y_true == 1) * 100.0),
-        "positive_mean_probability": float(np.mean(y_prob[positive_mask])) if np.any(positive_mask) else 0.0,
-        "negative_mean_probability": float(np.mean(y_prob[negative_mask])) if np.any(negative_mask) else 0.0,
-        "positive_median_probability": float(np.median(y_prob[positive_mask])) if np.any(positive_mask) else 0.0,
-        "negative_median_probability": float(np.median(y_prob[negative_mask])) if np.any(negative_mask) else 0.0,
+        "positive_mean_probability": (
+            float(np.mean(y_prob[positive_mask])) if np.any(positive_mask) else 0.0
+        ),
+        "negative_mean_probability": (
+            float(np.mean(y_prob[negative_mask])) if np.any(negative_mask) else 0.0
+        ),
+        "positive_median_probability": (
+            float(np.median(y_prob[positive_mask])) if np.any(positive_mask) else 0.0
+        ),
+        "negative_median_probability": (
+            float(np.median(y_prob[negative_mask])) if np.any(negative_mask) else 0.0
+        ),
         "min_probability": float(np.min(y_prob)),
         "max_probability": float(np.max(y_prob)),
         "predictions_at_or_above_0_85": int(np.sum(y_prob >= 0.85)),
@@ -191,16 +226,25 @@ def infer_early_warning_availability(metadata: dict) -> dict:
     if has_alignment_fields:
         return {
             "exact_patient_level_lead_time": "AVAILABLE",
-            "reason": "The existing metadata contains enough patient/time alignment information to calculate lead time from sequence timing fields.",
+            "reason": (
+                "The existing metadata contains enough patient/time alignment "
+                "information to calculate lead time from sequence timing fields."
+            ),
             "sequence_metadata_has_required_alignment": True,
         }
 
     return {
-        "exact_patient_level_lead_time": "NOT AVAILABLE FROM CURRENT SEQUENCE ARTIFACTS",
+        "exact_patient_level_lead_time": (
+            "NOT AVAILABLE FROM CURRENT SEQUENCE ARTIFACTS"
+        ),
         "reason": (
-            "The existing sequence artifacts and metadata do not include patient_id, start/end ICULOS, target timestep, "
-            "or patient sequence position. Without those alignment fields, exact patient-level lead time cannot be recovered "
-            "without inventing missing timing information."
+            (
+                "The existing sequence artifacts and metadata do not include "
+                "patient_id, start/end ICULOS, target timestep, or patient "
+                "sequence position. Without those alignment fields, exact "
+                "patient-level lead time cannot be recovered without inventing "
+                "missing timing information."
+            )
         ),
         "sequence_metadata_has_required_alignment": False,
     }
@@ -232,7 +276,9 @@ def main() -> None:
 
     train_mean, train_std = load_normalization_stats()
     if train_mean.shape[0] != feature_count or train_std.shape[0] != feature_count:
-        raise ValueError("Normalization statistics do not match the expected feature count.")
+        raise ValueError(
+            "Normalization statistics do not match the expected feature count."
+        )
 
     model = tf.keras.models.load_model(MODEL_PATH)
     X_test, y_test = load_test_data()
@@ -240,7 +286,12 @@ def main() -> None:
 
     y_prob = predict_probabilities(model, X_test, train_mean, train_std)
     if y_prob.shape[0] != y_test.shape[0]:
-        raise ValueError(f"Prediction count mismatch: expected {y_test.shape[0]}, got {y_prob.shape[0]}")
+        raise ValueError(
+            (
+                f"Prediction count mismatch: expected {y_test.shape[0]}, "
+                f"got {y_prob.shape[0]}"
+            )
+        )
 
     test_summary = summarize_probability_distribution(y_test, y_prob)
     final_metrics = compute_threshold_metrics(y_test, y_prob, PRIMARY_THRESHOLD)
@@ -252,7 +303,9 @@ def main() -> None:
 
     analysis_payload = {
         "model_path": str(MODEL_PATH.relative_to(REPO_ROOT)),
-        "normalization_stats_path": str(NORMALIZATION_STATS_PATH.relative_to(REPO_ROOT)),
+        "normalization_stats_path": str(
+            NORMALIZATION_STATS_PATH.relative_to(REPO_ROOT)
+        ),
         "final_threshold": float(PRIMARY_THRESHOLD),
         "test": {
             "total_sequences": int(test_summary["total_sequences"]),
@@ -261,13 +314,23 @@ def main() -> None:
             "positive_percentage": float(test_summary["positive_percentage"]),
         },
         "probability_analysis": {
-            "positive_mean_probability": float(test_summary["positive_mean_probability"]),
-            "negative_mean_probability": float(test_summary["negative_mean_probability"]),
-            "positive_median_probability": float(test_summary["positive_median_probability"]),
-            "negative_median_probability": float(test_summary["negative_median_probability"]),
+            "positive_mean_probability": float(
+                test_summary["positive_mean_probability"]
+            ),
+            "negative_mean_probability": float(
+                test_summary["negative_mean_probability"]
+            ),
+            "positive_median_probability": float(
+                test_summary["positive_median_probability"]
+            ),
+            "negative_median_probability": float(
+                test_summary["negative_median_probability"]
+            ),
             "minimum_probability": float(test_summary["min_probability"]),
             "maximum_probability": float(test_summary["max_probability"]),
-            "predictions_at_or_above_0_85": int(test_summary["predictions_at_or_above_0_85"]),
+            "predictions_at_or_above_0_85": int(
+                test_summary["predictions_at_or_above_0_85"]
+            ),
         },
         "final_threshold_metrics": {
             "threshold": float(PRIMARY_THRESHOLD),
@@ -284,7 +347,9 @@ def main() -> None:
                 int(final_metrics["true_positives"]),
             ],
         },
-        "threshold_analysis": {str(item["threshold"]): item for item in threshold_metrics},
+        "threshold_analysis": {
+            str(item["threshold"]): item for item in threshold_metrics
+        },
         "early_warning": early_warning,
     }
 
@@ -339,12 +404,30 @@ def main() -> None:
 
     print("\nTHRESHOLD ANALYSIS:")
     for item in threshold_metrics:
-        print(f"  {item['threshold']:.2f}: precision={item['precision']:.4f}, recall={item['recall']:.4f}, F1={item['f1_score']:.4f}")
+        print(
+            (
+                f"  {item['threshold']:.2f}: "
+                f"precision={item['precision']:.4f}, "
+                f"recall={item['recall']:.4f}, "
+                f"F1={item['f1_score']:.4f}"
+            )
+        )
 
     print("\nEARLY WARNING:")
-    print(f"  exact patient-level lead time: {early_warning['exact_patient_level_lead_time']}")
+    print(
+        (
+            "  exact patient-level lead time: "
+            f"{early_warning['exact_patient_level_lead_time']}"
+        )
+    )
     if not early_warning["sequence_metadata_has_required_alignment"]:
-        print("  reason: The existing sequence metadata and arrays do not include patient-level alignment fields needed to recover exact lead time.")
+        print(
+            (
+                "  reason: The existing sequence metadata and arrays do not "
+                "include patient-level alignment fields needed to recover "
+                "exact lead time."
+            )
+        )
 
     print("\nFINAL SUMMARY: PASS")
 

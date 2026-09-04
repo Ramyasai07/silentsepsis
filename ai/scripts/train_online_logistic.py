@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import sys
@@ -15,8 +15,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from ai.ml.metrics import evaluate_probabilities, select_threshold
-from ai.ml.online_preprocessing import ONLINE_FEATURE_COLUMNS
+from ai.ml.metrics import evaluate_probabilities, select_threshold  # noqa: E402
+from ai.ml.online_preprocessing import ONLINE_FEATURE_COLUMNS  # noqa: E402
 
 
 def load_online_splits(
@@ -27,25 +27,17 @@ def load_online_splits(
     metadata_path = data_root / "preprocessing_metadata.json"
 
     if not metadata_path.exists():
-        raise FileNotFoundError(
-            f"Metadata not found: {metadata_path}"
-        )
+        raise FileNotFoundError(f"Metadata not found: {metadata_path}")
 
-    metadata = json.loads(
-        metadata_path.read_text(encoding="utf-8")
-    )
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
 
     feature_columns = tuple(metadata["feature_columns"])
 
     if feature_columns != ONLINE_FEATURE_COLUMNS:
-        raise ValueError(
-            "Online feature schema does not match metadata"
-        )
+        raise ValueError("Online feature schema does not match metadata")
 
     if metadata["num_features"] != len(ONLINE_FEATURE_COLUMNS):
-        raise ValueError(
-            "Online feature count does not match metadata"
-        )
+        raise ValueError("Online feature count does not match metadata")
 
     expected_columns = [
         "patient_id",
@@ -61,47 +53,32 @@ def load_online_splits(
         path = data_root / f"{split_name}.csv"
 
         if not path.exists():
-            raise FileNotFoundError(
-                f"Missing split: {path}"
-            )
+            raise FileNotFoundError(f"Missing split: {path}")
 
         frame = pd.read_csv(path)
 
         if list(frame.columns) != expected_columns:
-            raise ValueError(
-                f"{split_name}: columns do not match online schema"
-            )
+            raise ValueError(f"{split_name}: columns do not match online schema")
 
         if frame["patient_id"].isna().any():
-            raise ValueError(
-                f"{split_name}: patient_id contains missing values"
-            )
+            raise ValueError(f"{split_name}: patient_id contains missing values")
 
         if frame["target"].isna().any():
-            raise ValueError(
-                f"{split_name}: target contains missing values"
-            )
+            raise ValueError(f"{split_name}: target contains missing values")
 
         if not set(frame["target"].unique()).issubset({0, 1}):
-            raise ValueError(
-                f"{split_name}: target must contain only 0 and 1"
-            )
+            raise ValueError(f"{split_name}: target must contain only 0 and 1")
 
         splits[split_name] = frame
 
-    train_patients = set(
-        splits["train"]["patient_id"]
-    )
-    validation_patients = set(
-        splits["validation"]["patient_id"]
-    )
+    train_patients = set(splits["train"]["patient_id"])
+    validation_patients = set(splits["validation"]["patient_id"])
 
     overlap = train_patients & validation_patients
 
     if overlap:
         raise ValueError(
-            "Patient leakage between train and validation: "
-            f"{len(overlap)} patients"
+            "Patient leakage between train and validation: " f"{len(overlap)} patients"
         )
 
     return (
@@ -117,19 +94,13 @@ def train_online_logistic(
 ) -> dict:
     """Train the stateless online-compatible Logistic Regression model."""
 
-    train, validation, metadata = load_online_splits(
-        data_root
-    )
+    train, validation, metadata = load_online_splits(data_root)
 
-    X_train = train.loc[
-        :, ONLINE_FEATURE_COLUMNS
-    ].astype(np.float32)
+    X_train = train.loc[:, ONLINE_FEATURE_COLUMNS].astype(np.float32)
 
     y_train = train["target"].astype(np.int8)
 
-    X_validation = validation.loc[
-        :, ONLINE_FEATURE_COLUMNS
-    ].astype(np.float32)
+    X_validation = validation.loc[:, ONLINE_FEATURE_COLUMNS].astype(np.float32)
 
     y_validation = validation["target"].astype(np.int8)
 
@@ -149,23 +120,15 @@ def train_online_logistic(
 
     imputer = SimpleImputer(strategy="median")
 
-    X_train_imputed = imputer.fit_transform(
-        X_train
-    )
+    X_train_imputed = imputer.fit_transform(X_train)
 
-    X_validation_imputed = imputer.transform(
-        X_validation
-    )
+    X_validation_imputed = imputer.transform(X_validation)
 
     if np.isnan(X_train_imputed).any():
-        raise ValueError(
-            "Imputed train features still contain NaN"
-        )
+        raise ValueError("Imputed train features still contain NaN")
 
     if np.isnan(X_validation_imputed).any():
-        raise ValueError(
-            "Imputed validation features still contain NaN"
-        )
+        raise ValueError("Imputed validation features still contain NaN")
 
     # ---------------------------------------------------------
     # MODEL
@@ -186,9 +149,7 @@ def train_online_logistic(
     # VALIDATION
     # ---------------------------------------------------------
 
-    validation_probabilities = model.predict_proba(
-        X_validation_imputed
-    )[:, 1]
+    validation_probabilities = model.predict_proba(X_validation_imputed)[:, 1]
 
     threshold_result = select_threshold(
         y_validation.to_numpy(),
@@ -234,27 +195,17 @@ def train_online_logistic(
     }
 
     artifact_metadata = {
-        "model_type": (
-            "sklearn.linear_model.LogisticRegression"
-        ),
+        "model_type": ("sklearn.linear_model.LogisticRegression"),
         "model_version": "online-logistic-v1",
-        "feature_columns": list(
-            ONLINE_FEATURE_COLUMNS
-        ),
-        "num_features": len(
-            ONLINE_FEATURE_COLUMNS
-        ),
+        "feature_columns": list(ONLINE_FEATURE_COLUMNS),
+        "num_features": len(ONLINE_FEATURE_COLUMNS),
         "class_weight": "balanced",
         "random_state": 42,
         "max_iter": 3000,
         "training_rows": int(len(train)),
         "validation_rows": int(len(validation)),
-        "training_patients": int(
-            train["patient_id"].nunique()
-        ),
-        "validation_patients": int(
-            validation["patient_id"].nunique()
-        ),
+        "training_patients": int(train["patient_id"].nunique()),
+        "validation_patients": int(validation["patient_id"].nunique()),
         "imputation": {
             "method": "median",
             "fit_split": "train",
@@ -262,13 +213,9 @@ def train_online_logistic(
             "statistics": imputation_statistics,
         },
         "threshold_selection": "validation_max_f1",
-        "threshold": float(
-            threshold_result.threshold
-        ),
+        "threshold": float(threshold_result.threshold),
         "validation_metrics": metrics,
-        "source_preprocessing_version": metadata.get(
-            "preprocessing_version"
-        ),
+        "source_preprocessing_version": metadata.get("preprocessing_version"),
     }
 
     metadata_path.write_text(
@@ -283,13 +230,9 @@ def train_online_logistic(
 
 
 def main() -> None:
-    data_root = Path(
-        "ai/data/processed_online"
-    )
+    data_root = Path("ai/data/processed_online")
 
-    artifact_root = Path(
-        "ai/artifacts/online-logistic-v1"
-    )
+    artifact_root = Path("ai/artifacts/online-logistic-v1")
 
     metadata = train_online_logistic(
         data_root,
@@ -306,5 +249,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

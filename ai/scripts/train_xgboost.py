@@ -9,7 +9,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-import numpy as np
+from ai.ml.data_loader import load_processed_dataset
+from ai.ml.metrics import evaluate_probabilities, select_threshold
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -20,9 +21,6 @@ except ModuleNotFoundError as exc:
     XGBOOST_IMPORT_ERROR = exc
 else:
     XGBOOST_IMPORT_ERROR = None
-
-from ai.ml.data_loader import load_processed_dataset
-from ai.ml.metrics import evaluate_probabilities, select_threshold
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
