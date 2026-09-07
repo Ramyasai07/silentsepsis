@@ -1,7 +1,12 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useAppStore } from '../../store/useAppStore';
 
-const COLORS = { Critical: '#FF6B9D', Warning: '#FDB022', Stable: '#20C5A0' };
+const COLORS = {
+  Critical:      '#FF6B9D',
+  Warning:       '#FDB022',
+  Stable:        '#20C5A0',
+  'Trending up': '#FDB022', // maps to MODERATE risk — same amber as Warning
+};
 
 export function WardCompositionCard({ counts }) {
   const darkMode = useAppStore((s) => s.darkMode);

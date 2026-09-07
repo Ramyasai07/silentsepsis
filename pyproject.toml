@@ -11,6 +11,7 @@ select = ["E", "F", "I"]
 ignore = []
 
 [tool.ruff.lint.per-file-ignores]
+"ai/scripts/*.py" = ["E501"]
 "app/models/*.py" = ["F821"]
 
 [tool.ruff.format]

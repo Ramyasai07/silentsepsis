@@ -1,0 +1,300 @@
+{
+  "model_version": "xgboost-v1-calibrated",
+  "source_model_version": "xgboost-v1",
+  "model_reference": "../xgboost-v1/model.json",
+  "model_reference_sha256": "ba5ada5da183f5d618bee8b50285fa97bd45f1b9ace573ffeeeb24e5c3dbacea",
+  "source_metadata_sha256": "764cdd11031f6aff2d85716e8989d2282f5ad2c2953848462e7d81456cf99e3a",
+  "calibration_method": "platt_scaling",
+  "feature_columns": [
+    "HR",
+    "O2Sat",
+    "Temp",
+    "SBP",
+    "MAP",
+    "DBP",
+    "Resp",
+    "EtCO2",
+    "BaseExcess",
+    "HCO3",
+    "FiO2",
+    "pH",
+    "PaCO2",
+    "SaO2",
+    "AST",
+    "BUN",
+    "Alkalinephos",
+    "Calcium",
+    "Chloride",
+    "Creatinine",
+    "Bilirubin_direct",
+    "Glucose",
+    "Lactate",
+    "Magnesium",
+    "Phosphate",
+    "Potassium",
+    "Bilirubin_total",
+    "TroponinI",
+    "Hct",
+    "Hgb",
+    "PTT",
+    "WBC",
+    "Fibrinogen",
+    "Platelets",
+    "Age",
+    "HospAdmTime",
+    "ICULOS",
+    "Gender",
+    "Unit1",
+    "Unit2",
+    "HR_missing",
+    "O2Sat_missing",
+    "Temp_missing",
+    "SBP_missing",
+    "MAP_missing",
+    "DBP_missing",
+    "Resp_missing",
+    "EtCO2_missing",
+    "BaseExcess_missing",
+    "HCO3_missing",
+    "FiO2_missing",
+    "pH_missing",
+    "PaCO2_missing",
+    "SaO2_missing",
+    "AST_missing",
+    "BUN_missing",
+    "Alkalinephos_missing",
+    "Calcium_missing",
+    "Chloride_missing",
+    "Creatinine_missing",
+    "Bilirubin_direct_missing",
+    "Glucose_missing",
+    "Lactate_missing",
+    "Magnesium_missing",
+    "Phosphate_missing",
+    "Potassium_missing",
+    "Bilirubin_total_missing",
+    "TroponinI_missing",
+    "Hct_missing",
+    "Hgb_missing",
+    "PTT_missing",
+    "WBC_missing",
+    "Fibrinogen_missing",
+    "Platelets_missing",
+    "Age_missing",
+    "HospAdmTime_missing",
+    "ICULOS_missing"
+  ],
+  "calibration_split": {
+    "source": "validation.csv only",
+    "patient_order": "sorted unique patient IDs",
+    "calibration_selection": "patients[::2]",
+    "calibration_patients": 3025,
+    "calibration_rows": 116889,
+    "evaluation_patients": 3024,
+    "evaluation_rows": 115141
+  },
+  "threshold": 0.0831148606161338,
+  "validation_metrics": {
+    "raw": {
+      "pr_auc": 0.1286333730211518,
+      "roc_auc": 0.8436433114093106,
+      "recall": 0.3628865979381443,
+      "specificity": 0.9616346145352073,
+      "precision": 0.1394888052308302,
+      "f1": 0.20151710319164162,
+      "confusion_matrix": [
+        [
+          108858,
+          4343
+        ],
+        [
+          1236,
+          704
+        ]
+      ],
+      "brier_score": 0.1439872533082962,
+      "calibration": {
+        "fraction_of_positives": [
+          0.0005210594876248371,
+          0.0017364125716270186,
+          0.0026064291920069507,
+          0.0029529268716345317,
+          0.005644811115935736,
+          0.00807782506731521,
+          0.00903248219558798,
+          0.017196456487754037,
+          0.029095014764634358,
+          0.09162758381101269
+        ],
+        "mean_predicted_value": [
+          0.140024178732337,
+          0.17838988530644115,
+          0.20758865225014742,
+          0.23796235306283262,
+          0.27229333510618337,
+          0.3152037862561139,
+          0.36797524730851094,
+          0.4320691117027764,
+          0.5278064327167931,
+          0.7369464325919342
+        ],
+        "bins": 10,
+        "strategy": "quantile"
+      },
+      "threshold": 0.7538283467292786,
+      "positive_rate": 0.0168489069922964,
+      "sample_count": 115141
+    },
+    "calibrated": {
+      "pr_auc": 0.12863337302115183,
+      "roc_auc": 0.8436433114093105,
+      "recall": 0.3628865979381443,
+      "specificity": 0.9616346145352073,
+      "precision": 0.1394888052308302,
+      "f1": 0.20151710319164162,
+      "confusion_matrix": [
+        [
+          108858,
+          4343
+        ],
+        [
+          1236,
+          704
+        ]
+      ],
+      "brier_score": 0.015574222930243012,
+      "calibration": {
+        "fraction_of_positives": [
+          0.0005210594876248371,
+          0.0017364125716270186,
+          0.0026064291920069507,
+          0.0029529268716345317,
+          0.005644811115935736,
+          0.00807782506731521,
+          0.00903248219558798,
+          0.017196456487754037,
+          0.029095014764634358,
+          0.09162758381101269
+        ],
+        "mean_predicted_value": [
+          0.0032490598514514097,
+          0.004484563490221971,
+          0.005542610810694991,
+          0.006757384385875093,
+          0.00828579387991554,
+          0.010464022037889065,
+          0.013628029730125847,
+          0.0183996614776761,
+          0.028449945437705845,
+          0.09155033515278836
+        ],
+        "bins": 10,
+        "strategy": "quantile"
+      },
+      "threshold": 0.0831148606161338,
+      "positive_rate": 0.0168489069922964,
+      "sample_count": 115141
+    },
+    "raw_patient": {
+      "pr_auc": 0.5573575839282351,
+      "roc_auc": 0.8725107773605896,
+      "recall": 0.4803921568627451,
+      "specificity": 0.9613475177304964,
+      "precision": 0.47342995169082125,
+      "f1": 0.4768856447688564,
+      "confusion_matrix": [
+        [
+          2711,
+          109
+        ],
+        [
+          106,
+          98
+        ]
+      ],
+      "brier_score": 0.2238613591831199,
+      "calibration": {
+        "fraction_of_positives": [
+          0.0030581039755351682,
+          0.01079136690647482,
+          0.009933774834437087,
+          0.0165016501650165,
+          0.009933774834437087,
+          0.033112582781456956,
+          0.0231023102310231,
+          0.0695364238410596,
+          0.11920529801324503,
+          0.3795379537953795
+        ],
+        "mean_predicted_value": [
+          0.2452419906034382,
+          0.28561923551044877,
+          0.33093010343068485,
+          0.3855908963546501,
+          0.4328431589713949,
+          0.47284753383784894,
+          0.5314343355276404,
+          0.5953350973050326,
+          0.6729916855199447,
+          0.798513936917774
+        ],
+        "bins": 10,
+        "strategy": "quantile"
+      },
+      "threshold": 0.7538283467292786,
+      "positive_rate": 0.06746031746031746,
+      "sample_count": 3024
+    },
+    "calibrated_patient": {
+      "pr_auc": 0.5573575839282351,
+      "roc_auc": 0.8725107773605896,
+      "recall": 0.4803921568627451,
+      "specificity": 0.9613475177304964,
+      "precision": 0.47342995169082125,
+      "f1": 0.4768856447688564,
+      "confusion_matrix": [
+        [
+          2711,
+          109
+        ],
+        [
+          106,
+          98
+        ]
+      ],
+      "brier_score": 0.054661079102845955,
+      "calibration": {
+        "fraction_of_positives": [
+          0.0030581039755351682,
+          0.01079136690647482,
+          0.009933774834437087,
+          0.0165016501650165,
+          0.009933774834437087,
+          0.033112582781456956,
+          0.0231023102310231,
+          0.0695364238410596,
+          0.11920529801324503,
+          0.3795379537953795
+        ],
+        "mean_predicted_value": [
+          0.00708369235603377,
+          0.008931078383317916,
+          0.011347289152149945,
+          0.014820304136242447,
+          0.01840797146997319,
+          0.022056386602002414,
+          0.028633652778811892,
+          0.038137449476934315,
+          0.05511942803772796,
+          0.12441656420988309
+        ],
+        "bins": 10,
+        "strategy": "quantile"
+      },
+      "threshold": 0.0831148606161338,
+      "positive_rate": 0.06746031746031746,
+      "sample_count": 3024
+    }
+  },
+  "created_at": "2026-08-22T22:24:04.741932+00:00"
+}

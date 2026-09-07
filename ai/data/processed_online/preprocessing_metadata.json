@@ -1,0 +1,59 @@
+{
+  "preprocessing_version": "online-stateless-v1",
+  "feature_columns": [
+    "HR",
+    "O2Sat",
+    "Temp",
+    "SBP",
+    "DBP",
+    "Resp",
+    "MAP",
+    "Age",
+    "Gender",
+    "HR_missing",
+    "O2Sat_missing",
+    "Temp_missing",
+    "SBP_missing",
+    "DBP_missing",
+    "Resp_missing"
+  ],
+  "num_features": 15,
+  "source_columns": {
+    "HR": "HR",
+    "O2Sat": "O2Sat",
+    "Temp": "Temp",
+    "SBP": "SBP",
+    "DBP": "DBP",
+    "Resp": "Resp",
+    "MAP": [
+      "SBP",
+      "DBP"
+    ],
+    "Age": "Age",
+    "Gender": "Gender"
+  },
+  "transformations": {
+    "MAP": "(SBP + 2 * DBP) / 3 when both source values are present",
+    "numeric_features": "Parse current-row values as numeric; invalid or missing values remain null",
+    "Gender": "FEMALE=0, MALE=1, OTHER=-1, UNKNOWN=-1; PhysioNet 0=0 and 1=1",
+    "missingness": "Indicators are computed from original current-row values before transformation"
+  },
+  "gender_mapping": {
+    "FEMALE": 0,
+    "MALE": 1,
+    "OTHER": -1,
+    "UNKNOWN": -1
+  },
+  "missingness_definitions": {
+    "HR_missing": "1 when original HR is missing or invalid, otherwise 0",
+    "O2Sat_missing": "1 when original O2Sat is missing or invalid, otherwise 0",
+    "Temp_missing": "1 when original Temp is missing or invalid, otherwise 0",
+    "SBP_missing": "1 when original SBP is missing or invalid, otherwise 0",
+    "DBP_missing": "1 when original DBP is missing or invalid, otherwise 0",
+    "Resp_missing": "1 when original Resp is missing or invalid, otherwise 0"
+  },
+  "imputation_policy": "none; missing values remain null",
+  "forward_fill": false,
+  "history_required": false,
+  "split_provenance": "patient_split_manifest.csv"
+}

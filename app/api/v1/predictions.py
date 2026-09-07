@@ -1,11 +1,11 @@
-from uuid import UUID
+﻿from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_role
 from app.db.session import get_db
-from app.ml.rule_based_predictor import RuleBasedPredictor
+from app.ml.online_logistic_predictor import OnlineLogisticPredictor
 from app.models.user import User
 from app.schemas.prediction import PredictionCreate, PredictionOut
 from app.services.prediction_service import (
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/patients/{patient_id}/predictions", tags=["predictio
 
 
 def get_prediction_service() -> PredictionService:
-    return PredictionService(RuleBasedPredictor())
+    return PredictionService(OnlineLogisticPredictor())
 
 
 def _map_prediction_error(error: Exception) -> HTTPException:
@@ -51,7 +51,6 @@ def create_prediction(
     db: Session = Depends(get_db),
     prediction_service: PredictionService = Depends(get_prediction_service),
 ) -> PredictionOut:
-    """Record a new risk prediction evaluation."""
     if payload.patient_id != patient_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -79,7 +78,6 @@ def list_predictions(
     db: Session = Depends(get_db),
     prediction_service: PredictionService = Depends(get_prediction_service),
 ) -> list[PredictionOut]:
-    """List historical risk predictions for a patient."""
     try:
         predictions = prediction_service.get_predictions_for_patient(
             db,
@@ -99,7 +97,6 @@ def read_latest_prediction(
     db: Session = Depends(get_db),
     prediction_service: PredictionService = Depends(get_prediction_service),
 ) -> PredictionOut:
-    """Retrieve the most recent risk prediction for a patient."""
     try:
         prediction = prediction_service.get_latest_prediction(db, patient_id=patient_id)
         return PredictionOut.model_validate(prediction).model_dump()
