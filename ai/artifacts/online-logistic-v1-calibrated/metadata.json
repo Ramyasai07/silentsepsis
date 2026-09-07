@@ -1,0 +1,139 @@
+{
+  "model_version": "online-logistic-v1-calibrated",
+  "source_model_version": "online-logistic-v1",
+  "calibration_method": "platt_scaling",
+  "feature_columns": [
+    "HR",
+    "O2Sat",
+    "Temp",
+    "SBP",
+    "DBP",
+    "Resp",
+    "MAP",
+    "Age",
+    "Gender",
+    "HR_missing",
+    "O2Sat_missing",
+    "Temp_missing",
+    "SBP_missing",
+    "DBP_missing",
+    "Resp_missing"
+  ],
+  "num_features": 15,
+  "calibration_split": {
+    "method": "sorted_patient_ids[::2]",
+    "calibration_patients": 3025,
+    "calibration_rows": 116889,
+    "assessment_patients": 3024,
+    "assessment_rows": 115141
+  },
+  "threshold": 0.03150491842443488,
+  "threshold_selection": "calibration_split_max_f1",
+  "raw_assessment_metrics": {
+    "pr_auc": 0.036239559694734524,
+    "roc_auc": 0.6572042936672174,
+    "recall": 0.22577319587628866,
+    "specificity": 0.9162109875354458,
+    "precision": 0.04413987705331049,
+    "f1": 0.07384304138919329,
+    "confusion_matrix": [
+      [
+        103716,
+        9485
+      ],
+      [
+        1502,
+        438
+      ]
+    ],
+    "brier_score": 0.23528957112540758,
+    "calibration": {
+      "fraction_of_positives": [
+        0.007642205818497612,
+        0.008077123501823866,
+        0.009379885356956748,
+        0.009814139308667709,
+        0.013926130957529625,
+        0.013081015086770733,
+        0.01936772624630884,
+        0.019888830988361993,
+        0.02579468473163106,
+        0.04151467778356783
+      ],
+      "mean_predicted_value": [
+        0.2896904366169861,
+        0.3635113871713866,
+        0.4041067338447357,
+        0.42916664698548246,
+        0.4567780791106317,
+        0.4770076994269193,
+        0.5061387017066434,
+        0.5429568797284904,
+        0.5890236861916336,
+        0.6803269475983711
+      ],
+      "bins": 10,
+      "strategy": "quantile"
+    },
+    "threshold": 0.6300301678256321,
+    "positive_rate": 0.0168489069922964,
+    "sample_count": 115141
+  },
+  "calibrated_assessment_metrics": {
+    "pr_auc": 0.036239559694734524,
+    "roc_auc": 0.6572042936672174,
+    "recall": 0.22577319587628866,
+    "specificity": 0.9162109875354458,
+    "precision": 0.04413987705331049,
+    "f1": 0.07384304138919329,
+    "confusion_matrix": [
+      [
+        103716,
+        9485
+      ],
+      [
+        1502,
+        438
+      ]
+    ],
+    "brier_score": 0.01646128847382176,
+    "calibration": {
+      "fraction_of_positives": [
+        0.007642205818497612,
+        0.008077123501823866,
+        0.009379885356956748,
+        0.009814139308667709,
+        0.013926130957529625,
+        0.013081015086770733,
+        0.01936772624630884,
+        0.019888830988361993,
+        0.02579468473163106,
+        0.04151467778356783
+      ],
+      "mean_predicted_value": [
+        0.008938492944698916,
+        0.011995408352539266,
+        0.013974701993329536,
+        0.015311414148166906,
+        0.016917402702882684,
+        0.018177687660319086,
+        0.0201632563983313,
+        0.022981735507405707,
+        0.027138809768515883,
+        0.040033673678638824
+      ],
+      "bins": 10,
+      "strategy": "quantile"
+    },
+    "threshold": 0.03150491842443488,
+    "positive_rate": 0.0168489069922964,
+    "sample_count": 115141
+  },
+  "provenance": {
+    "validation_only": true,
+    "test_read": false,
+    "training_performed": false,
+    "source_model_sha256": "fa015fc0b104e6a328c9d9c2f58f881db58f4780727c773d003e00f63841ecd6",
+    "source_imputer_sha256": "b4bdeb0bf238b6897abf0e32076402d74454a5ef5ad4dae3f1548a263999a265"
+  }
+}

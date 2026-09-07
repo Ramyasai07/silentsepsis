@@ -1,0 +1,104 @@
+{
+  "model_type": "sklearn.linear_model.LogisticRegression",
+  "model_version": "online-logistic-v1",
+  "feature_columns": [
+    "HR",
+    "O2Sat",
+    "Temp",
+    "SBP",
+    "DBP",
+    "Resp",
+    "MAP",
+    "Age",
+    "Gender",
+    "HR_missing",
+    "O2Sat_missing",
+    "Temp_missing",
+    "SBP_missing",
+    "DBP_missing",
+    "Resp_missing"
+  ],
+  "num_features": 15,
+  "class_weight": "balanced",
+  "random_state": 42,
+  "max_iter": 3000,
+  "training_rows": 1090448,
+  "validation_rows": 232030,
+  "training_patients": 28233,
+  "validation_patients": 6049,
+  "imputation": {
+    "method": "median",
+    "fit_split": "train",
+    "artifact": "imputer.joblib",
+    "statistics": {
+      "HR": 83.5,
+      "O2Sat": 98.0,
+      "Temp": 37.0,
+      "SBP": 121.0,
+      "DBP": 62.0,
+      "Resp": 18.0,
+      "MAP": 82.16666412353516,
+      "Age": 64.0,
+      "Gender": 1.0,
+      "HR_missing": 0.0,
+      "O2Sat_missing": 0.0,
+      "Temp_missing": 1.0,
+      "SBP_missing": 0.0,
+      "DBP_missing": 0.0,
+      "Resp_missing": 0.0
+    }
+  },
+  "threshold_selection": "validation_max_f1",
+  "threshold": 0.6547905239855734,
+  "validation_metrics": {
+    "pr_auc": 0.03459056629658668,
+    "roc_auc": 0.6368595159868815,
+    "recall": 0.15567157095396297,
+    "specificity": 0.9447492713417845,
+    "precision": 0.04953560371517028,
+    "f1": 0.07515609784040786,
+    "confusion_matrix": [
+      [
+        215229,
+        12587
+      ],
+      [
+        3558,
+        656
+      ]
+    ],
+    "brier_score": 0.23521631922359162,
+    "calibration": {
+      "fraction_of_positives": [
+        0.00905055380769728,
+        0.01025729431539025,
+        0.011291643321984226,
+        0.012067405076929707,
+        0.014954962720337887,
+        0.015041158470887385,
+        0.020299099254406757,
+        0.02025600137913201,
+        0.026117312416497868,
+        0.042279015644528725
+      ],
+      "mean_predicted_value": [
+        0.2909458407412142,
+        0.36406346409567597,
+        0.4045345916085396,
+        0.42962992178862275,
+        0.457474072416191,
+        0.47706786929792716,
+        0.5061177822652562,
+        0.5425824782411923,
+        0.5879473362876733,
+        0.6773007350741599
+      ],
+      "bins": 10,
+      "strategy": "quantile"
+    },
+    "threshold": 0.6547905239855734,
+    "positive_rate": 0.01816144464077921,
+    "sample_count": 232030
+  },
+  "source_preprocessing_version": "online-stateless-v1"
+}
