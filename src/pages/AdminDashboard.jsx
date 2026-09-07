@@ -1,15 +1,23 @@
+import { useState } from 'react';
 import Topbar from '../components/Topbar';
 import { precisionRecallHistory, wardStaffResponse, auditLog } from '../data/mockData';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function AdminDashboard() {
+  const [query, setQuery] = useState('');
+  const [auditLogOpen, setAuditLogOpen] = useState(false);
+  const filteredAuditLog = auditLog.filter((entry) => {
+    const normalizedQuery = query.toLowerCase();
+    return entry.event.toLowerCase().includes(normalizedQuery) || entry.actor.toLowerCase().includes(normalizedQuery);
+  });
+
   return (
     <>
-      <Topbar title="System health" subtitle="All wards, last 30 days" />
+      <Topbar title="System health" subtitle="All wards, last 30 days" onSearchChange={setQuery} searchPlaceholder="Search audit entries…" />
 
       <div className="flex justify-between items-center" style={{ marginBottom: 18 }}>
         <div />
-        <button className="btn sm">
+        <button className="btn sm" onClick={() => setAuditLogOpen(true)}>
           <i className="ti ti-file-text" aria-hidden="true"></i> Full audit log
         </button>
       </div>
@@ -67,7 +75,8 @@ export default function AdminDashboard() {
         </div>
         <div className="panel">
           <p className="panel-title">Recent audit entries</p>
-          {auditLog.map((entry, i) => (
+          {filteredAuditLog.length === 0 && <p className="p-4 text-center text-dim text-sm">No entries found</p>}
+          {filteredAuditLog.map((entry, i) => (
             <div key={i} style={{ padding: '10px 0', borderBottom: i < auditLog.length - 1 ? '1px solid var(--line)' : 'none' }}>
               <p style={{ fontSize: 12.5, margin: 0, color: 'var(--text-primary)' }}>{entry.event}</p>
               <p className="patient-meta text-dim">{entry.actor} · {entry.time}</p>
@@ -75,6 +84,47 @@ export default function AdminDashboard() {
           ))}
         </div>
       </div>
+
+      {auditLogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="audit-log-title"
+          onClick={() => setAuditLogOpen(false)}
+        >
+          <div
+            className="panel w-full max-w-2xl"
+            style={{ maxHeight: '80vh', overflowY: 'auto', margin: 0, boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
+              <div>
+                <h2 id="audit-log-title" className="panel-title" style={{ marginBottom: 4 }}>Full audit log</h2>
+                <p className="patient-meta">Recent system and clinical actions</p>
+              </div>
+              <button className="icon-btn" onClick={() => setAuditLogOpen(false)} aria-label="Close audit log" title="Close audit log">
+                <i className="ti ti-x" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div>
+              {auditLog.map((entry, index) => (
+                <div
+                  key={`${entry.time}-${index}`}
+                  className="flex justify-between items-start gap-6"
+                  style={{ padding: '12px 0', borderTop: '1px solid var(--line)' }}
+                >
+                  <div>
+                    <p style={{ fontSize: 13, margin: 0, color: 'var(--text-primary)' }}>{entry.event}</p>
+                    <p className="patient-meta" style={{ marginTop: 4 }}>{entry.actor}</p>
+                  </div>
+                  <span className="mono text-dim" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{entry.time}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
