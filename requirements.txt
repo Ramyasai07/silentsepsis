@@ -17,3 +17,8 @@ prometheus-client
 structlog
 ruff
 black
+
+joblib
+numpy
+pandas
+scikit-learn
