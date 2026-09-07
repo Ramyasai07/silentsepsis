@@ -50,3 +50,15 @@ export async function login(email, password) {
 export function getMe() {
   return apiFetch('/auth/me');
 }
+
+/**
+ * Create a user through the admin-only endpoint.
+ *
+ * @param {{ email: string, staff_id: string, full_name: string, password: string, role_name: string }} payload
+ */
+export function createUser(payload) {
+  return apiFetch('/auth/users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
