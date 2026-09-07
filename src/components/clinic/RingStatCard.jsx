@@ -11,7 +11,7 @@ export function RingStatCard({ title, total, segments }) {
         <svg width="76" height="76" viewBox="0 0 76 76" role="img" aria-label={`${title}: ${total} total`}>
           <circle cx="38" cy="38" r={radius} fill="none" className="stroke-pastel-brandLight dark:stroke-pastel-brandLightDark" strokeWidth="9" />
           {segments.map((seg, i) => {
-            const len = (seg.value / sum) * circumference;
+            const len = sum === 0 ? 0 : (seg.value / sum) * circumference;
             const el = (
               <circle
                 key={seg.label}
