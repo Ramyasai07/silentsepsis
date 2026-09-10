@@ -3,7 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { RefreshCw, AlertCircle, ArrowLeft, Check, FilePlus, Plus } from 'lucide-react';
 import { createPatientBaseline, getPatient, getPatientBaseline, getPatientVitals, getPatientLatestPrediction } from '../api/patients';
-import { getAlerts, acknowledgeAlert, confirmAlert, dismissAlert } from '../api/alerts';
+import {
+  getAlerts,
+  acknowledgeAlert,
+  confirmAlert,
+  dismissAlert,
+  submitAlertFeedback,
+  getAlertFeedback,
+} from '../api/alerts';
 import { useAuth } from '../context/AuthContext';
 import { VitalsEntryForm } from '../components/clinic/VitalsEntryForm';
 
@@ -29,6 +36,11 @@ export default function PatientDetail() {
   const [dismissReason, setDismissReason] = useState('');
   const [alertActionError, setAlertActionError] = useState(null);
   const [alertActionLoading, setAlertActionLoading] = useState(false);
+  const [feedback, setFeedback] = useState([]);
+  const [feedbackType, setFeedbackType] = useState('');
+  const [feedbackComments, setFeedbackComments] = useState('');
+  const [feedbackMessage, setFeedbackMessage] = useState(null);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -41,18 +53,31 @@ export default function PatientDetail() {
     setIsLoading(true);
     setError(null);
     try {
-      const [ptData, vitalsData, predData, baselineData, alertData] = await Promise.all([
+      const [ptData, vitalsData, baselineData, alertData] = await Promise.all([
         getPatient(id),
         getPatientVitals(id),
-        getPatientLatestPrediction(id),
         getPatientBaseline(id),
         getAlerts({ patient_id: id }),
       ]);
+      const latestVital = [...(vitalsData || [])]
+        .sort((a, b) => new Date(b.recorded_at) - new Date(a.recorded_at))[0];
+      let predData = await getPatientLatestPrediction(id);
+      for (let attempt = 0; latestVital && predData?.vital_reading_id !== latestVital.id && attempt < 5; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        predData = await getPatientLatestPrediction(id);
+      }
       setPatient(ptData);
       setVitals(vitalsData || []);
-      setPrediction(predData);
+      setPrediction(predData?.vital_reading_id === latestVital?.id || !latestVital ? predData : null);
       setBaseline(baselineData);
       setAlerts(alertData || []);
+      const latestAlert = [...(alertData || [])]
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+      if (latestAlert) {
+        setFeedback(await getAlertFeedback(latestAlert.id));
+      } else {
+        setFeedback([]);
+      }
       if (baselineData) {
         setBaselineForm({
           baseline_hr: baselineData.baseline_hr ?? '',
@@ -71,6 +96,8 @@ export default function PatientDetail() {
     }
   }, [id]);
 
+  const latestAlert = [...alerts]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] || null;
   const actionableAlert = [...alerts]
     .filter((alert) => ['active', 'watching', 'acknowledged'].includes(alert.status?.toLowerCase()))
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] || null;
@@ -90,6 +117,28 @@ export default function PatientDetail() {
       await loadData();
     } finally {
       setAlertActionLoading(false);
+    }
+  }
+
+  async function handleFeedbackSubmit(event) {
+    event.preventDefault();
+    if (!latestAlert || !feedbackType) return;
+
+    setFeedbackMessage(null);
+    setFeedbackSubmitting(true);
+    try {
+      const saved = await submitAlertFeedback(latestAlert.id, {
+        feedback_type: feedbackType,
+        comments: feedbackComments.trim() || null,
+      });
+      setFeedback((current) => [saved, ...current]);
+      setFeedbackType('');
+      setFeedbackComments('');
+      setFeedbackMessage({ type: 'success', text: 'Feedback submitted.' });
+    } catch (err) {
+      setFeedbackMessage({ type: 'error', text: err?.message || 'Unable to submit feedback.' });
+    } finally {
+      setFeedbackSubmitting(false);
     }
   }
 
@@ -385,6 +434,53 @@ export default function PatientDetail() {
           <FilePlus size={14} className="inline mr-1" /> Escalate to physician
         </button>
       </div>
+      {latestAlert && canConfirmOrDismiss && (
+        <div className="panel" style={{ marginTop: 16 }}>
+          <p className="panel-title">Alert feedback</p>
+          {feedback.length > 0 && (
+            <p className="text-[12px] text-dim" style={{ marginBottom: 10 }}>
+              Latest feedback: {feedback[0].feedback_type}
+            </p>
+          )}
+          <form onSubmit={handleFeedbackSubmit} className="grid gap-3">
+            <label className="text-[12px] text-dim">
+              Feedback type
+              <select
+                value={feedbackType}
+                onChange={(event) => setFeedbackType(event.target.value)}
+                required
+                className="w-full mt-1 px-2.5 py-2 rounded border border-[var(--line)] bg-[var(--bg-card)]"
+              >
+                <option value="">Select feedback</option>
+                <option value="CONFIRMED">Confirmed case</option>
+                <option value="FALSE_POSITIVE">False positive</option>
+                <option value="MISSED_CASE">Missed case</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </label>
+            <label className="text-[12px] text-dim">
+              Comments
+              <textarea
+                value={feedbackComments}
+                onChange={(event) => setFeedbackComments(event.target.value)}
+                maxLength={1000}
+                rows={3}
+                className="w-full mt-1 px-3 py-2 rounded border border-[var(--line)] bg-[var(--bg-card)]"
+              />
+            </label>
+            {feedbackMessage && (
+              <p className={`text-sm ${feedbackMessage.type === 'error' ? 'text-red-600' : 'text-green-600'}`} role="status">
+                {feedbackMessage.text}
+              </p>
+            )}
+            <div>
+              <button type="submit" className="btn sm" disabled={!feedbackType || feedbackSubmitting}>
+                {feedbackSubmitting ? 'Submitting…' : 'Submit feedback'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
       {dismissingAlert && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="dismiss-alert-title">
           <form onSubmit={handleDismissAlert} className="panel w-full max-w-md">

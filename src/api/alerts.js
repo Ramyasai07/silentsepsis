@@ -104,3 +104,27 @@ export async function resolveAlert(alertId) {
     method: 'PATCH',
   });
 }
+
+/**
+ * Submit clinician feedback for an alert.
+ *
+ * @param {string} alertId
+ * @param {{ feedback_type: string, comments?: string|null }} payload
+ * @returns {Promise<object>}
+ */
+export function submitAlertFeedback(alertId, payload) {
+  return apiFetch(`/alerts/${alertId}/feedback`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Retrieve feedback previously submitted for an alert.
+ *
+ * @param {string} alertId
+ * @returns {Promise<Array<object>>}
+ */
+export function getAlertFeedback(alertId) {
+  return apiFetch(`/alerts/${alertId}/feedback`);
+}
