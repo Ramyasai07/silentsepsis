@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { RefreshCw, AlertCircle, ArrowLeft, Check, FilePlus, Plus } from 'lucide-react';
 import { createPatientBaseline, getPatient, getPatientBaseline, getPatientVitals, getPatientLatestPrediction } from '../api/patients';
+import { getAlerts, acknowledgeAlert, confirmAlert, dismissAlert } from '../api/alerts';
 import { useAuth } from '../context/AuthContext';
 import { VitalsEntryForm } from '../components/clinic/VitalsEntryForm';
 
@@ -23,6 +24,11 @@ export default function PatientDetail() {
   });
   const [baselineMessage, setBaselineMessage] = useState(null);
   const [savingBaseline, setSavingBaseline] = useState(false);
+  const [alerts, setAlerts] = useState([]);
+  const [dismissingAlert, setDismissingAlert] = useState(false);
+  const [dismissReason, setDismissReason] = useState('');
+  const [alertActionError, setAlertActionError] = useState(null);
+  const [alertActionLoading, setAlertActionLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -35,16 +41,18 @@ export default function PatientDetail() {
     setIsLoading(true);
     setError(null);
     try {
-      const [ptData, vitalsData, predData, baselineData] = await Promise.all([
+      const [ptData, vitalsData, predData, baselineData, alertData] = await Promise.all([
         getPatient(id),
         getPatientVitals(id),
         getPatientLatestPrediction(id),
         getPatientBaseline(id),
+        getAlerts({ patient_id: id }),
       ]);
       setPatient(ptData);
       setVitals(vitalsData || []);
       setPrediction(predData);
       setBaseline(baselineData);
+      setAlerts(alertData || []);
       if (baselineData) {
         setBaselineForm({
           baseline_hr: baselineData.baseline_hr ?? '',
@@ -62,6 +70,51 @@ export default function PatientDetail() {
       setIsLoading(false);
     }
   }, [id]);
+
+  const actionableAlert = [...alerts]
+    .filter((alert) => ['active', 'watching', 'acknowledged'].includes(alert.status?.toLowerCase()))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] || null;
+
+  async function handleConfirmAlert() {
+    if (!actionableAlert) return;
+    setAlertActionError(null);
+    setAlertActionLoading(true);
+    try {
+      if (actionableAlert.status?.toLowerCase() === 'active') {
+        await acknowledgeAlert(actionableAlert.id);
+      }
+      await confirmAlert(actionableAlert.id);
+      await loadData();
+    } catch (err) {
+      setAlertActionError(`Confirm failed: ${err?.message || 'Unable to confirm alert.'}`);
+      await loadData();
+    } finally {
+      setAlertActionLoading(false);
+    }
+  }
+
+  async function handleDismissAlert(event) {
+    event.preventDefault();
+    const reason = dismissReason.trim();
+    if (!actionableAlert || !reason) return;
+
+    setAlertActionError(null);
+    setAlertActionLoading(true);
+    try {
+      await dismissAlert(actionableAlert.id, reason);
+      setDismissingAlert(false);
+      setDismissReason('');
+      await loadData();
+    } catch (err) {
+      setAlertActionError(`Dismiss failed: ${err?.message || 'Unable to dismiss alert.'}`);
+    } finally {
+      setAlertActionLoading(false);
+    }
+  }
+
+  function handleEscalateAlert() {
+    setAlertActionError('Escalation to a physician is not supported by the backend yet.');
+  }
 
   async function handleBaselineSubmit(event) {
     event.preventDefault();
@@ -158,6 +211,13 @@ export default function PatientDetail() {
 
   return (
     <>
+      {alertActionError && (
+        <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-[13px] flex items-center gap-2" role="alert">
+          <AlertCircle size={15} />
+          <span>{alertActionError}</span>
+        </div>
+      )}
+
       <button className="btn ghost sm" style={{ marginBottom: 16 }} onClick={() => navigate(-1)}>
         <i className="ti ti-arrow-left" aria-hidden="true"></i> Back
       </button>
@@ -297,26 +357,58 @@ export default function PatientDetail() {
       {/* Role-Gated Controls */}
       <div className="flex gap-8">
         <button
+          onClick={handleConfirmAlert}
           className="btn confirm disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={!canConfirmOrDismiss}
+          disabled={!canConfirmOrDismiss || !actionableAlert || alertActionLoading}
           title={!canConfirmOrDismiss ? 'Only Physicians and Admins can confirm alerts' : ''}
         >
-          <Check size={14} className="inline mr-1" /> Confirm alert
+          <Check size={14} className="inline mr-1" /> {alertActionLoading ? 'Updating…' : 'Confirm alert'}
         </button>
         <button
+          onClick={() => {
+            setAlertActionError(null);
+            setDismissReason('');
+            setDismissingAlert(true);
+          }}
           className="btn ghost disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={!canConfirmOrDismiss}
+          disabled={!canConfirmOrDismiss || !actionableAlert || alertActionLoading}
           title={!canConfirmOrDismiss ? 'Only Physicians and Admins can dismiss alerts' : ''}
         >
           Dismiss
         </button>
         <button
+          onClick={handleEscalateAlert}
           className="btn primary disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={!canEscalate}
+          title={!canEscalate ? 'Escalation is not available for this role' : 'Escalation is not supported by the backend'}
         >
           <FilePlus size={14} className="inline mr-1" /> Escalate to physician
         </button>
       </div>
+      {dismissingAlert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="dismiss-alert-title">
+          <form onSubmit={handleDismissAlert} className="panel w-full max-w-md">
+            <p id="dismiss-alert-title" className="panel-title">Dismiss alert</p>
+            <label className="block text-sm text-dim" htmlFor="dismiss-reason">
+              Clinical reason
+              <textarea
+                id="dismiss-reason"
+                value={dismissReason}
+                onChange={(event) => setDismissReason(event.target.value)}
+                required
+                rows={4}
+                className="w-full mt-1 px-3 py-2 rounded border border-[var(--line)] bg-[var(--bg-card)]"
+              />
+            </label>
+            <div className="flex justify-end gap-2" style={{ marginTop: 14 }}>
+              <button type="button" className="btn ghost sm" onClick={() => setDismissingAlert(false)} disabled={alertActionLoading}>Cancel</button>
+              <button type="submit" className="btn sm" disabled={!dismissReason.trim() || alertActionLoading}>
+                {alertActionLoading ? 'Dismissing…' : 'Dismiss alert'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
       {showVitalsForm && (
         <VitalsEntryForm
           patient={{ ...patient, room: `${patient.bed_number}, ${wardName}` }}
