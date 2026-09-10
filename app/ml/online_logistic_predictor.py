@@ -149,9 +149,7 @@ class OnlineLogisticPredictor(RiskPredictor):
 
         raw_probability = float(self.model.predict_proba(imputed)[:, 1][0])
         clipped_probability = float(np.clip(raw_probability, 1e-6, 1 - 1e-6))
-        calibration_input = np.log(
-            clipped_probability / (1.0 - clipped_probability)
-        )
+        calibration_input = np.log(clipped_probability / (1.0 - clipped_probability))
 
         calibrated_probability = float(
             self.calibrator.predict_proba(
