@@ -29,6 +29,18 @@ export async function getPatients(params = {}) {
 }
 
 /**
+ * Register a patient in a ward. Backend authorization is Admin/Physician.
+ *
+ * @param {{ name: string, age: number, sex: string, ward_id: string, bed_number: string, admission_date: string, admission_reason: string }} payload
+ */
+export function createPatient(payload) {
+  return apiFetch('/patients', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
  * Fetch patient profile details by ID.
  *
  * @param {string} patientId
@@ -46,6 +58,46 @@ export async function getPatient(patientId) {
  */
 export async function getPatientVitals(patientId) {
   return apiFetch(`/patients/${patientId}/vitals`);
+}
+
+/**
+ * Set or update a patient's clinical baseline. Backend authorization is Admin/Physician.
+ *
+ * @param {string} patientId
+ * @param {{ baseline_hr?: number|null, baseline_spo2?: number|null, baseline_temperature?: number|null, baseline_rr?: number|null, baseline_systolic_bp?: number|null, baseline_diastolic_bp?: number|null, calculated_from_hours: number }} payload
+ */
+export function createPatientBaseline(patientId, payload) {
+  return apiFetch(`/patients/${patientId}/baseline`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Fetch a patient's baseline, if one has been recorded.
+ *
+ * @param {string} patientId
+ */
+export async function getPatientBaseline(patientId) {
+  try {
+    return await apiFetch(`/patients/${patientId}/baseline`);
+  } catch (err) {
+    if (err?.status === 404) return null;
+    throw err;
+  }
+}
+
+/**
+ * Record a single vital reading. Backend authorization is Admin/Physician/Nurse.
+ *
+ * @param {string} patientId
+ * @param {{ heart_rate: number, respiratory_rate: number, systolic_bp: number, diastolic_bp: number, spo2: number, temperature: number, recorded_at?: string }} payload
+ */
+export function createPatientVital(patientId, payload) {
+  return apiFetch(`/patients/${patientId}/vitals`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 /**

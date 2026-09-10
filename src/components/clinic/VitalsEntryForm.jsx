@@ -1,27 +1,44 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { useAppStore } from '../../store/useAppStore';
+import { createPatientVital } from '../../api/patients';
 
 const FIELDS = [
-  { key: 'hr', label: 'Heart rate', unit: 'bpm', placeholder: '78' },
-  { key: 'rr', label: 'Respiratory rate', unit: '/min', placeholder: '16' },
-  { key: 'bp', label: 'Blood pressure (systolic)', unit: 'mmHg', placeholder: '120' },
+  { key: 'heart_rate', label: 'Heart rate', unit: 'bpm', placeholder: '78' },
+  { key: 'respiratory_rate', label: 'Respiratory rate', unit: '/min', placeholder: '16' },
+  { key: 'systolic_bp', label: 'Systolic blood pressure', unit: 'mmHg', placeholder: '120' },
+  { key: 'diastolic_bp', label: 'Diastolic blood pressure', unit: 'mmHg', placeholder: '80' },
   { key: 'spo2', label: 'Oxygen saturation', unit: '%', placeholder: '97' },
-  { key: 'temp', label: 'Temperature', unit: '°C', placeholder: '37.0' },
+  { key: 'temperature', label: 'Temperature', unit: '°C', placeholder: '37.0' },
 ];
 
 export function VitalsEntryForm({ patient, onClose }) {
   const [values, setValues] = useState({});
   const [submitted, setSubmitted] = useState(false);
-  const addVitals = useAppStore((s) => s.addVitals);
+  const [error, setError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const filledCount = Object.values(values).filter((v) => v !== '' && v !== undefined).length;
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    addVitals(patient.id, { ...values, time: new Date().toISOString() });
-    setSubmitted(true);
-    setTimeout(onClose, 1100);
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await createPatientVital(patient.id, {
+        heart_rate: Number(values.heart_rate),
+        respiratory_rate: Number(values.respiratory_rate),
+        systolic_bp: Number(values.systolic_bp),
+        diastolic_bp: Number(values.diastolic_bp),
+        spo2: Number(values.spo2),
+        temperature: Number(values.temperature),
+      });
+      setSubmitted(true);
+      setTimeout(onClose, 1100);
+    } catch (err) {
+      setError(err?.message || 'Unable to record vitals.');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -51,7 +68,7 @@ export function VitalsEntryForm({ patient, onClose }) {
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-2 gap-3 mb-5">
                 {FIELDS.map((f) => (
-                  <div key={f.key} className={f.key === 'bp' ? 'col-span-2' : ''}>
+                  <div key={f.key}>
                     <label className="block text-[11.5px] font-medium text-pastel-ink dark:text-pastel-inkDark mb-1">
                       {f.label} <span className="text-pastel-sub dark:text-pastel-subDark font-normal">({f.unit})</span>
                     </label>
@@ -66,6 +83,7 @@ export function VitalsEntryForm({ patient, onClose }) {
                   </div>
                 ))}
               </div>
+              {error && <p className="text-[12px] text-red-600 mb-3" role="alert">{error}</p>}
 
               <div className="flex gap-2">
                 <button type="button" onClick={onClose} className="flex-1 h-10 rounded-xl border border-pastel-brandLight dark:border-pastel-borderDark text-[13px] font-medium text-pastel-ink dark:text-pastel-inkDark">
@@ -73,10 +91,10 @@ export function VitalsEntryForm({ patient, onClose }) {
                 </button>
                 <button
                   type="submit"
-                  disabled={filledCount === 0}
+                  disabled={filledCount !== FIELDS.length || isSubmitting}
                   className="flex-1 h-10 rounded-xl bg-pastel-brand text-white text-[13px] font-semibold disabled:opacity-40"
                 >
-                  Save vitals
+                  {isSubmitting ? 'Saving…' : 'Save vitals'}
                 </button>
               </div>
             </form>

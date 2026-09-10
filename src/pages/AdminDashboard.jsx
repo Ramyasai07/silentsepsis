@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Topbar from '../components/Topbar';
 import { precisionRecallHistory, wardStaffResponse, auditLog } from '../data/mockData';
 import { ApiError, NetworkError } from '../api/client';
 import { getAuditLog, getAuditLogs } from '../api/auditLogs';
 import { createUser } from '../api/auth';
+import { createWard } from '../api/wards';
 import { useAuth } from '../context/AuthContext';
 
 const EMPTY_USER = {
@@ -14,6 +16,7 @@ const EMPTY_USER = {
   password: '',
   role_name: 'Nurse',
 };
+const EMPTY_WARD = { name: '', capacity: '' };
 
 function formatAction(action) {
   return action.replaceAll('_', ' ');
@@ -33,6 +36,7 @@ export default function AdminDashboard() {
   const [query, setQuery] = useState('');
   const [auditLogOpen, setAuditLogOpen] = useState(false);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [logs, setLogs] = useState([]);
   const [selectedLog, setSelectedLog] = useState(null);
   const [filters, setFilters] = useState({ entity: '', entity_id: '', user_id: '', action: '', limit: 50, offset: 0 });
@@ -41,6 +45,9 @@ export default function AdminDashboard() {
   const [userForm, setUserForm] = useState(EMPTY_USER);
   const [creatingUser, setCreatingUser] = useState(false);
   const [userMessage, setUserMessage] = useState(null);
+  const [wardForm, setWardForm] = useState(EMPTY_WARD);
+  const [creatingWard, setCreatingWard] = useState(false);
+  const [wardMessage, setWardMessage] = useState(null);
 
   const normalizedQuery = query.toLowerCase();
   const filteredAuditLog = auditLog.filter((entry) =>
@@ -96,6 +103,23 @@ export default function AdminDashboard() {
       setUserMessage({ type: 'error', text: errorMessage(error, 'Unable to create user') });
     } finally {
       setCreatingUser(false);
+    }
+  }
+
+  async function handleCreateWard(event) {
+    event.preventDefault();
+    setCreatingWard(true);
+    setWardMessage(null);
+    try {
+      const created = await createWard({ name: wardForm.name, capacity: Number(wardForm.capacity) });
+      setWardMessage({ type: 'success', text: `Created ${created.name} (${created.capacity} beds)` });
+      setWardForm(EMPTY_WARD);
+      await queryClient.invalidateQueries({ queryKey: ['wards'] });
+      await loadLogs();
+    } catch (error) {
+      setWardMessage({ type: 'error', text: errorMessage(error, 'Unable to create ward') });
+    } finally {
+      setCreatingWard(false);
     }
   }
 
@@ -211,6 +235,35 @@ export default function AdminDashboard() {
               </span>
             </div>
           ))}
+        </div>
+        <div className="panel">
+          <p className="panel-title">Create ward</p>
+          <form onSubmit={handleCreateWard}>
+            <label className="block text-sm" style={{ marginBottom: 10 }}>
+              <span className="text-dim">Ward name</span>
+              <input
+                value={wardForm.name}
+                onChange={(event) => setWardForm((current) => ({ ...current, name: event.target.value }))}
+                required
+                className="w-full mt-1 px-3 py-2 rounded border border-[var(--line)] bg-[var(--bg-card)]"
+              />
+            </label>
+            <label className="block text-sm" style={{ marginBottom: 12 }}>
+              <span className="text-dim">Capacity</span>
+              <input
+                type="number"
+                min="0"
+                value={wardForm.capacity}
+                onChange={(event) => setWardForm((current) => ({ ...current, capacity: event.target.value }))}
+                required
+                className="w-full mt-1 px-3 py-2 rounded border border-[var(--line)] bg-[var(--bg-card)]"
+              />
+            </label>
+            <button className="btn sm" type="submit" disabled={creatingWard}>
+              {creatingWard ? 'Creating…' : 'Create ward'}
+            </button>
+            {wardMessage && <p className={wardMessage.type === 'error' ? 'text-sm text-red-600' : 'text-sm text-green-600'} role="status" style={{ marginTop: 10 }}>{wardMessage.text}</p>}
+          </form>
         </div>
         <div className="panel">
           <p className="panel-title">Recent audit entries</p>

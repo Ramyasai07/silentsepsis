@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, AlertCircle, RefreshCw } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ClinicSidebar } from '../components/clinic/ClinicSidebar';
 import { ClinicTopbar } from '../components/clinic/ClinicTopbar';
 import { usePatients } from '../hooks/usePatients';
+import { createPatient } from '../api/patients';
+import { getWards } from '../api/wards';
+import { ApiError, NetworkError } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 const STATUS_CHIP = {
   critical: 'bg-pastel-pinkLight dark:bg-pastel-pinkLightDark text-pastel-pink',
@@ -37,9 +42,42 @@ const AVATAR_BG = [
 
 export default function PatientsPage() {
   const [query, setQuery] = useState('');
+  const [form, setForm] = useState({ name: '', age: '', sex: 'MALE', ward_id: '', bed_number: '', admission_date: new Date().toISOString().slice(0, 16), admission_reason: '' });
+  const [isCreating, setIsCreating] = useState(false);
+  const [formMessage, setFormMessage] = useState(null);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: rawPatients, isLoading, isError, error, refetch } = usePatients();
+  const { data: wards = [], isLoading: wardsLoading } = useQuery({ queryKey: ['wards'], queryFn: getWards });
+  const canCreate = ['admin', 'physician'].includes(user?.role?.toLowerCase());
+
+  function errorMessage(err) {
+    if (err instanceof NetworkError) return "Can't reach the server. Is the backend running?";
+    if (err instanceof ApiError) return `Unable to create patient (${err.status}): ${err.message}`;
+    return 'Unable to create patient.';
+  }
+
+  async function handleCreate(event) {
+    event.preventDefault();
+    setIsCreating(true);
+    setFormMessage(null);
+    try {
+      const created = await createPatient({
+        ...form,
+        age: Number(form.age),
+        admission_date: new Date(form.admission_date).toISOString(),
+      });
+      setFormMessage({ type: 'success', text: `${created.name} was admitted successfully.` });
+      setForm((current) => ({ ...current, name: '', age: '', ward_id: '', bed_number: '', admission_reason: '' }));
+      await queryClient.invalidateQueries({ queryKey: ['patients'] });
+    } catch (err) {
+      setFormMessage({ type: 'error', text: errorMessage(err) });
+    } finally {
+      setIsCreating(false);
+    }
+  }
 
   // Map backend PatientListItem (uses real risk_tier from DB)
   const patients = (rawPatients || []).map((p) => {
@@ -79,6 +117,57 @@ export default function PatientsPage() {
               />
             </div>
           </div>
+          {canCreate && (
+            <div className="mb-4 rounded-2xl bg-white dark:bg-pastel-cardDark p-4 border border-pastel-brandLight dark:border-pastel-borderDark">
+              <p className="text-[14px] font-semibold text-pastel-ink dark:text-pastel-inkDark mb-3">Register patient</p>
+              <form onSubmit={handleCreate} className="grid grid-cols-2 gap-3">
+                {[
+                  ['name', 'Full name', 'text'],
+                  ['age', 'Age', 'number'],
+                  ['bed_number', 'Bed number', 'text'],
+                  ['admission_reason', 'Admission reason', 'text'],
+                ].map(([name, label, type]) => (
+                  <label key={name} className="text-[12px] text-pastel-sub dark:text-pastel-subDark">
+                    {label}
+                    <input
+                      name={name}
+                      type={type}
+                      min={name === 'age' ? 0 : undefined}
+                      value={form[name]}
+                      onChange={(event) => setForm((current) => ({ ...current, [name]: event.target.value }))}
+                      required
+                      className="w-full mt-1 h-9 px-2.5 rounded-lg border border-pastel-brandLight dark:border-pastel-borderDark bg-transparent text-pastel-ink dark:text-pastel-inkDark"
+                    />
+                  </label>
+                ))}
+                <label className="text-[12px] text-pastel-sub dark:text-pastel-subDark">
+                  Sex
+                  <select value={form.sex} onChange={(event) => setForm((current) => ({ ...current, sex: event.target.value }))} className="w-full mt-1 h-9 px-2.5 rounded-lg border border-pastel-brandLight dark:border-pastel-borderDark bg-transparent text-pastel-ink dark:text-pastel-inkDark">
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </label>
+                <label className="text-[12px] text-pastel-sub dark:text-pastel-subDark">
+                  Ward
+                  <select value={form.ward_id} onChange={(event) => setForm((current) => ({ ...current, ward_id: event.target.value }))} required className="w-full mt-1 h-9 px-2.5 rounded-lg border border-pastel-brandLight dark:border-pastel-borderDark bg-transparent text-pastel-ink dark:text-pastel-inkDark" disabled={wardsLoading}>
+                    <option value="">Select ward</option>
+                    {wards.map((ward) => <option key={ward.id} value={ward.id}>{ward.name}</option>)}
+                  </select>
+                </label>
+                <label className="text-[12px] text-pastel-sub dark:text-pastel-subDark col-span-2">
+                  Admission date
+                  <input type="datetime-local" value={form.admission_date} onChange={(event) => setForm((current) => ({ ...current, admission_date: event.target.value }))} required className="w-full mt-1 h-9 px-2.5 rounded-lg border border-pastel-brandLight dark:border-pastel-borderDark bg-transparent text-pastel-ink dark:text-pastel-inkDark" />
+                </label>
+                <div className="col-span-2 flex items-center gap-3">
+                  <button type="submit" disabled={isCreating || wardsLoading || wards.length === 0} className="h-9 px-4 rounded-lg bg-pastel-brand text-white text-[12.5px] font-medium disabled:opacity-40">
+                    {isCreating ? 'Registering…' : 'Register patient'}
+                  </button>
+                  {formMessage && <p className={`text-[12px] ${formMessage.type === 'error' ? 'text-red-600' : 'text-green-600'}`} role="status">{formMessage.text}</p>}
+                </div>
+              </form>
+            </div>
+          )}
 
           <div className="rounded-2xl bg-white dark:bg-pastel-cardDark shadow-[0_1px_2px_rgba(27,36,38,0.04),0_8px_20px_rgba(27,36,38,0.05)] dark:shadow-none dark:border dark:border-pastel-borderDark overflow-hidden">
             {/* Loading State */}

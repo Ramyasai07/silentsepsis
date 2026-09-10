@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { RefreshCw, AlertCircle, ArrowLeft, Check, FilePlus } from 'lucide-react';
-import { getPatient, getPatientVitals, getPatientLatestPrediction } from '../api/patients';
+import { RefreshCw, AlertCircle, ArrowLeft, Check, FilePlus, Plus } from 'lucide-react';
+import { createPatientBaseline, getPatient, getPatientBaseline, getPatientVitals, getPatientLatestPrediction } from '../api/patients';
 import { useAuth } from '../context/AuthContext';
+import { VitalsEntryForm } from '../components/clinic/VitalsEntryForm';
 
 export default function PatientDetail() {
   const { id } = useParams();
@@ -13,6 +14,15 @@ export default function PatientDetail() {
   const [patient, setPatient] = useState(null);
   const [vitals, setVitals] = useState([]);
   const [prediction, setPrediction] = useState(null);
+  const [baseline, setBaseline] = useState(null);
+  const [showBaselineForm, setShowBaselineForm] = useState(false);
+  const [showVitalsForm, setShowVitalsForm] = useState(false);
+  const [baselineForm, setBaselineForm] = useState({
+    baseline_hr: '', baseline_spo2: '', baseline_temperature: '', baseline_rr: '',
+    baseline_systolic_bp: '', baseline_diastolic_bp: '', calculated_from_hours: '24',
+  });
+  const [baselineMessage, setBaselineMessage] = useState(null);
+  const [savingBaseline, setSavingBaseline] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -25,20 +35,52 @@ export default function PatientDetail() {
     setIsLoading(true);
     setError(null);
     try {
-      const [ptData, vitalsData, predData] = await Promise.all([
+      const [ptData, vitalsData, predData, baselineData] = await Promise.all([
         getPatient(id),
         getPatientVitals(id),
         getPatientLatestPrediction(id),
+        getPatientBaseline(id),
       ]);
       setPatient(ptData);
       setVitals(vitalsData || []);
       setPrediction(predData);
+      setBaseline(baselineData);
+      if (baselineData) {
+        setBaselineForm({
+          baseline_hr: baselineData.baseline_hr ?? '',
+          baseline_spo2: baselineData.baseline_spo2 ?? '',
+          baseline_temperature: baselineData.baseline_temperature ?? '',
+          baseline_rr: baselineData.baseline_rr ?? '',
+          baseline_systolic_bp: baselineData.baseline_systolic_bp ?? '',
+          baseline_diastolic_bp: baselineData.baseline_diastolic_bp ?? '',
+          calculated_from_hours: baselineData.calculated_from_hours ?? '24',
+        });
+      }
     } catch (err) {
       setError(err?.message || 'Failed to load patient profile.');
     } finally {
       setIsLoading(false);
     }
   }, [id]);
+
+  async function handleBaselineSubmit(event) {
+    event.preventDefault();
+    setSavingBaseline(true);
+    setBaselineMessage(null);
+    try {
+      const payload = Object.fromEntries(
+        Object.entries(baselineForm).map(([key, value]) => [key, value === '' ? null : Number(value)])
+      );
+      const saved = await createPatientBaseline(id, payload);
+      setBaseline(saved);
+      setShowBaselineForm(false);
+      setBaselineMessage({ type: 'success', text: 'Baseline saved.' });
+    } catch (err) {
+      setBaselineMessage({ type: 'error', text: err?.message || 'Unable to save baseline.' });
+    } finally {
+      setSavingBaseline(false);
+    }
+  }
 
   useEffect(() => {
     loadData();
@@ -181,7 +223,52 @@ export default function PatientDetail() {
       </div>
 
       <div className="panel" style={{ marginBottom: 16 }}>
-        <p className="panel-title">Raw readings</p>
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="panel-title" style={{ marginBottom: 4 }}>Clinical baseline</p>
+            <p className="text-[12px] text-pastel-sub dark:text-pastel-subDark">
+              {baseline ? `Calculated from ${baseline.calculated_from_hours} hours of data.` : 'No baseline recorded yet.'}
+            </p>
+          </div>
+          {(role === 'admin' || role === 'physician') && (
+            <button className="btn sm" onClick={() => setShowBaselineForm((current) => !current)}>
+              {baseline ? 'Update baseline' : 'Set baseline'}
+            </button>
+          )}
+        </div>
+        {baselineMessage && <p className={`text-sm ${baselineMessage.type === 'error' ? 'text-red-600' : 'text-green-600'}`} role="status" style={{ marginTop: 10 }}>{baselineMessage.text}</p>}
+        {showBaselineForm && (
+          <form onSubmit={handleBaselineSubmit} className="grid grid-cols-2 gap-3" style={{ marginTop: 14 }}>
+            {[
+              ['baseline_hr', 'Heart rate'],
+              ['baseline_rr', 'Respiratory rate'],
+              ['baseline_systolic_bp', 'Systolic BP'],
+              ['baseline_diastolic_bp', 'Diastolic BP'],
+              ['baseline_spo2', 'SpO2'],
+              ['baseline_temperature', 'Temperature'],
+              ['calculated_from_hours', 'Hours of data'],
+            ].map(([name, label]) => (
+              <label key={name} className="text-[12px] text-dim">
+                {label}
+                <input type="number" min="0" step="0.1" value={baselineForm[name]} onChange={(event) => setBaselineForm((current) => ({ ...current, [name]: event.target.value }))} className="w-full mt-1 px-2.5 py-2 rounded border border-[var(--line)] bg-[var(--bg-card)]" />
+              </label>
+            ))}
+            <div className="col-span-2">
+              <button className="btn sm" type="submit" disabled={savingBaseline}>{savingBaseline ? 'Saving…' : 'Save baseline'}</button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      <div className="panel" style={{ marginBottom: 16 }}>
+        <div className="flex justify-between items-center" style={{ marginBottom: 12 }}>
+          <p className="panel-title" style={{ marginBottom: 0 }}>Raw readings</p>
+          {canEscalate && (
+            <button className="btn sm" onClick={() => setShowVitalsForm(true)}>
+              <Plus size={14} className="inline mr-1" /> Add vitals
+            </button>
+          )}
+        </div>
         {sortedVitals.length === 0 ? (
           <p className="p-4 text-[13px] text-pastel-sub dark:text-pastel-subDark">No raw readings logged.</p>
         ) : (
@@ -230,6 +317,15 @@ export default function PatientDetail() {
           <FilePlus size={14} className="inline mr-1" /> Escalate to physician
         </button>
       </div>
+      {showVitalsForm && (
+        <VitalsEntryForm
+          patient={{ ...patient, room: `${patient.bed_number}, ${wardName}` }}
+          onClose={() => {
+            setShowVitalsForm(false);
+            loadData();
+          }}
+        />
+      )}
     </>
   );
 }

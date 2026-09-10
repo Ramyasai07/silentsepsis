@@ -18,6 +18,18 @@ export function getWards() {
 }
 
 /**
+ * Create a hospital ward. Backend authorization is Admin-only.
+ *
+ * @param {{ name: string, capacity: number }} payload
+ */
+export function createWard(payload) {
+  return apiFetch('/wards', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
  * Retrieve details of a specific ward by ID.
  *
  * @param {string} wardId
