@@ -8,6 +8,9 @@ import numpy as np
 import pandas as pd
 
 from app.ml.base import (
+    RISK_SCORE_HIGH_MAX,
+    RISK_SCORE_LOW_MAX,
+    RISK_SCORE_MODERATE_MAX,
     RISK_TIER_CRITICAL,
     RISK_TIER_HIGH,
     RISK_TIER_LOW,
@@ -156,11 +159,11 @@ class OnlineLogisticPredictor(RiskPredictor):
             np.clip(calibrated_probability + baseline_adjustment, 0.0, 1.0)
         )
 
-        if calibrated_probability < 0.3:
+        if calibrated_probability < RISK_SCORE_LOW_MAX:
             risk_tier = RISK_TIER_LOW
-        elif calibrated_probability < 0.5:
+        elif calibrated_probability < RISK_SCORE_MODERATE_MAX:
             risk_tier = RISK_TIER_MODERATE
-        elif calibrated_probability < 0.7:
+        elif calibrated_probability < RISK_SCORE_HIGH_MAX:
             risk_tier = RISK_TIER_HIGH
         else:
             risk_tier = RISK_TIER_CRITICAL

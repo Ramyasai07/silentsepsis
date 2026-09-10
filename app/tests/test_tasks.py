@@ -159,7 +159,7 @@ def test_evaluate_all_active_patients_creates_prediction_for_patient_with_vitals
     patient = create_patient(admin_token, UUID(ward["id"]))
     create_vital(admin_token, UUID(patient["id"]))
 
-    with patch("app.tasks.risk_evaluation.RuleBasedPredictor", new=HighRiskPredictor):
+    with patch("app.tasks.risk_evaluation.TrainedRiskPredictor", new=HighRiskPredictor):
         result = evaluate_all_active_patients.apply().get()
 
     assert result["patients_evaluated"] == 1
@@ -182,7 +182,7 @@ def test_evaluate_all_active_patients_skips_patients_with_no_vitals() -> None:
     patient_with_vitals = create_patient(admin_token, UUID(ward["id"]), bed_number="A2")
     create_vital(admin_token, UUID(patient_with_vitals["id"]))
 
-    with patch("app.tasks.risk_evaluation.RuleBasedPredictor", new=HighRiskPredictor):
+    with patch("app.tasks.risk_evaluation.TrainedRiskPredictor", new=HighRiskPredictor):
         result = evaluate_all_active_patients.apply().get()
 
     assert result["patients_evaluated"] == 1
@@ -210,7 +210,7 @@ def test_individual_patient_failure_does_not_stop_next_patient() -> None:
 
     original_generate = PredictionService.generate_prediction
     with (
-        patch("app.tasks.risk_evaluation.RuleBasedPredictor", new=HighRiskPredictor),
+        patch("app.tasks.risk_evaluation.TrainedRiskPredictor", new=HighRiskPredictor),
         patch(
             "app.tasks.risk_evaluation.PredictionService.generate_prediction",
             new=side_effect,
@@ -233,7 +233,7 @@ def test_business_failure_does_not_retry_batch() -> None:
         raise RuntimeError("forced business failure")
 
     with (
-        patch("app.tasks.risk_evaluation.RuleBasedPredictor", new=HighRiskPredictor),
+        patch("app.tasks.risk_evaluation.TrainedRiskPredictor", new=HighRiskPredictor),
         patch(
             "app.tasks.risk_evaluation.PredictionService.generate_prediction",
             new=raise_business_failure,
@@ -292,7 +292,7 @@ def test_evaluate_all_active_patients_handles_patient_deleted_before_evaluation(
 
     with (
         patch(
-            "app.tasks.risk_evaluation.RuleBasedPredictor",
+            "app.tasks.risk_evaluation.TrainedRiskPredictor",
             new=HighRiskPredictor,
         ),
         patch.object(
@@ -318,7 +318,7 @@ def test_transient_db_error_triggers_retry() -> None:
         raise OperationalError("SELECT 1", {}, Exception("transient"))
 
     with (
-        patch("app.tasks.risk_evaluation.RuleBasedPredictor", new=HighRiskPredictor),
+        patch("app.tasks.risk_evaluation.TrainedRiskPredictor", new=HighRiskPredictor),
         patch(
             "app.tasks.risk_evaluation.PredictionService.generate_prediction",
             new=raise_operational_error,
@@ -366,7 +366,7 @@ def test_transient_db_error_retry_state_preserves_completed_work() -> None:
 
     with (
         patch(
-            "app.tasks.risk_evaluation.RuleBasedPredictor",
+            "app.tasks.risk_evaluation.TrainedRiskPredictor",
             new=HighRiskPredictor,
         ),
         patch(
@@ -405,7 +405,7 @@ def test_transient_db_retry_reattempts_failed_patient_without_double_counting() 
     patient = create_patient(admin_token, UUID(ward["id"]))
     create_vital(admin_token, UUID(patient["id"]))
 
-    with patch("app.tasks.risk_evaluation.RuleBasedPredictor", new=HighRiskPredictor):
+    with patch("app.tasks.risk_evaluation.TrainedRiskPredictor", new=HighRiskPredictor):
         result = evaluate_all_active_patients.apply(
             kwargs={
                 "patient_ids_to_evaluate": [patient["id"]],

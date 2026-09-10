@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_role
 from app.db.session import get_db
-from app.ml.online_logistic_predictor import OnlineLogisticPredictor
+from app.ml.trained_predictor import TrainedRiskPredictor
 from app.models.user import User
 from app.schemas.prediction import PredictionCreate, PredictionOut
 from app.services.prediction_service import (
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/patients/{patient_id}/predictions", tags=["predictio
 
 
 def get_prediction_service() -> PredictionService:
-    return PredictionService(OnlineLogisticPredictor())
+    return PredictionService(TrainedRiskPredictor())
 
 
 def _map_prediction_error(error: Exception) -> HTTPException:
