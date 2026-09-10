@@ -17,6 +17,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { NetworkError, ApiError } from '../api/client';
+import { commandPatients } from '../data/commandPatients';
+import { downloadWardReport } from '../lib/downloadReport';
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
 
@@ -153,6 +155,11 @@ export default function Analytics() {
     },
   };
   const axisProps = { tick: { fill: 'var(--text-dim)', fontSize: 11 } };
+
+  function exportCsv() {
+    console.log('Export CSV - not yet implemented');
+    window.alert('CSV export is not yet implemented.');
+  }
 
   return (
     <>
@@ -317,10 +324,10 @@ export default function Analytics() {
       </div>
 
       <div className="flex gap-8 mt-24">
-        <button className="btn">
+        <button className="btn" onClick={() => downloadWardReport(commandPatients)}>
           <i className="ti ti-download" aria-hidden="true" /> Export PDF report
         </button>
-        <button className="btn ghost">
+        <button className="btn ghost" onClick={exportCsv}>
           <i className="ti ti-download" aria-hidden="true" /> Export CSV
         </button>
       </div>

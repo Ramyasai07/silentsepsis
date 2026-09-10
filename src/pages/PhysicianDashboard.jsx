@@ -7,15 +7,20 @@ const escalated = patients.filter((p) => p.tier !== 'stable');
 
 export default function PhysicianDashboard() {
   const [selectedId, setSelectedId] = useState(escalated[0].id);
+  const [query, setQuery] = useState('');
   const patient = patients.find((p) => p.id === selectedId);
+  const filteredEscalated = escalated.filter((p) =>
+    p.name.toLowerCase().includes(query.toLowerCase()) || p.id.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
     <>
-      <Topbar title="Escalated cases" subtitle="Confirmed by nursing staff, sorted by risk" />
+      <Topbar title="Escalated cases" subtitle="Confirmed by nursing staff, sorted by risk" onSearchChange={setQuery} searchPlaceholder="Search patients…" />
 
       <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 18 }}>
         <div className="panel" style={{ padding: 8 }}>
-          {escalated.map((p) => (
+          {filteredEscalated.length === 0 && <p className="p-4 text-center text-dim text-sm">No patients found</p>}
+          {filteredEscalated.map((p) => (
             <div
               key={p.id}
               onClick={() => setSelectedId(p.id)}

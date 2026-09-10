@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Topbar from '../components/Topbar';
-import { precisionRecallHistory, wardStaffResponse } from '../data/mockData';
+import { precisionRecallHistory, wardStaffResponse, auditLog } from '../data/mockData';
 import { ApiError, NetworkError } from '../api/client';
 import { getAuditLog, getAuditLogs } from '../api/auditLogs';
 import { createUser } from '../api/auth';
@@ -30,6 +30,8 @@ function errorMessage(error, fallback) {
 }
 
 export default function AdminDashboard() {
+  const [query, setQuery] = useState('');
+  const [auditLogOpen, setAuditLogOpen] = useState(false);
   const { user } = useAuth();
   const [logs, setLogs] = useState([]);
   const [selectedLog, setSelectedLog] = useState(null);
@@ -39,6 +41,15 @@ export default function AdminDashboard() {
   const [userForm, setUserForm] = useState(EMPTY_USER);
   const [creatingUser, setCreatingUser] = useState(false);
   const [userMessage, setUserMessage] = useState(null);
+
+  const normalizedQuery = query.toLowerCase();
+  const filteredAuditLog = auditLog.filter((entry) =>
+    entry.event.toLowerCase().includes(normalizedQuery) || entry.actor.toLowerCase().includes(normalizedQuery)
+  );
+  const filteredLogs = logs.filter((entry) =>
+    [entry.action, entry.entity, entry.entity_id, entry.user_id]
+      .some((value) => String(value ?? '').toLowerCase().includes(normalizedQuery))
+  );
 
   async function loadLogs(nextFilters = filters) {
     setLogsLoading(true);
@@ -102,7 +113,14 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <Topbar title="System health" subtitle="All wards, last 30 days" />
+      <Topbar title="System health" subtitle="All wards, last 30 days" onSearchChange={setQuery} searchPlaceholder="Search audit entries…" />
+
+      <div className="flex justify-between items-center" style={{ marginBottom: 18 }}>
+        <div />
+        <button className="btn sm" onClick={() => setAuditLogOpen(true)}>
+          <i className="ti ti-file-text" aria-hidden="true"></i> Full audit log
+        </button>
+      </div>
 
       <div className="stat-grid">
         <div className="stat-card">
@@ -194,6 +212,16 @@ export default function AdminDashboard() {
             </div>
           ))}
         </div>
+        <div className="panel">
+          <p className="panel-title">Recent audit entries</p>
+          {filteredAuditLog.length === 0 && <p className="p-4 text-center text-dim text-sm">No entries found</p>}
+          {filteredAuditLog.map((entry, i) => (
+            <div key={i} style={{ padding: '10px 0', borderBottom: i < auditLog.length - 1 ? '1px solid var(--line)' : 'none' }}>
+              <p style={{ fontSize: 12.5, margin: 0, color: 'var(--text-primary)' }}>{entry.event}</p>
+              <p className="patient-meta text-dim">{entry.actor} · {entry.time}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="panel">
@@ -224,7 +252,7 @@ export default function AdminDashboard() {
           <button className="btn sm" type="submit">Apply filters</button>
         </form>
         {logsError && <p className="text-sm text-red-600" role="alert">{logsError}</p>}
-        {logsLoading ? <p className="text-sm text-dim">Loading audit logs…</p> : logs.length === 0 ? <p className="text-sm text-dim">No audit logs returned.</p> : logs.map((entry) => (
+        {logsLoading ? <p className="text-sm text-dim">Loading audit logs…</p> : filteredLogs.length === 0 ? <p className="text-sm text-dim">No audit logs returned.</p> : filteredLogs.map((entry) => (
           <button key={entry.id} type="button" onClick={() => handleLogSelect(entry.id)} className="block w-full text-left" style={{ padding: '10px 0', borderBottom: '1px solid var(--line)' }}>
             <p style={{ fontSize: 12.5, margin: 0, color: 'var(--text-primary)' }}>{formatAction(entry.action)} · {entry.entity}</p>
             <p className="patient-meta text-dim">{entry.user_id ?? '—'} · {formatDate(entry.created_at)}</p>
@@ -245,6 +273,47 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {auditLogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="audit-log-title"
+          onClick={() => setAuditLogOpen(false)}
+        >
+          <div
+            className="panel w-full max-w-2xl"
+            style={{ maxHeight: '80vh', overflowY: 'auto', margin: 0, boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
+              <div>
+                <h2 id="audit-log-title" className="panel-title" style={{ marginBottom: 4 }}>Full audit log</h2>
+                <p className="patient-meta">Recent system and clinical actions</p>
+              </div>
+              <button className="icon-btn" onClick={() => setAuditLogOpen(false)} aria-label="Close audit log" title="Close audit log">
+                <i className="ti ti-x" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div>
+              {auditLog.map((entry, index) => (
+                <div
+                  key={`${entry.time}-${index}`}
+                  className="flex justify-between items-start gap-6"
+                  style={{ padding: '12px 0', borderTop: '1px solid var(--line)' }}
+                >
+                  <div>
+                    <p style={{ fontSize: 13, margin: 0, color: 'var(--text-primary)' }}>{entry.event}</p>
+                    <p className="patient-meta" style={{ marginTop: 4 }}>{entry.actor}</p>
+                  </div>
+                  <span className="mono text-dim" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{entry.time}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

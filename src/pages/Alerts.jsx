@@ -16,6 +16,7 @@ const STATUS_TONE = {
 export default function Alerts() {
   const { user } = useAuth();
   const [alerts, setAlerts] = useState([]);
+  const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -29,6 +30,11 @@ export default function Alerts() {
   const role = user?.role?.toLowerCase() ?? '';
   const canAcknowledgeOrDismiss = role === 'nurse' || role === 'physician' || role === 'admin';
   const canConfirmOrResolve = role === 'physician' || role === 'admin';
+  const filteredAlerts = alerts.filter((alert) => {
+    const normalizedQuery = query.toLowerCase();
+    return String(alert.patient_id || '').toLowerCase().includes(normalizedQuery)
+      || String(alert.message || '').toLowerCase().includes(normalizedQuery);
+  });
 
   const loadAlerts = useCallback(async () => {
     setIsLoading(true);
@@ -106,7 +112,7 @@ export default function Alerts() {
 
   return (
     <>
-      <Topbar title="Alert history" subtitle="All wards" />
+      <Topbar title="Alert history" subtitle="All wards" onSearchChange={setQuery} searchPlaceholder="Search alerts…" />
 
       {actionError && (
         <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-[13px] flex items-center justify-between">
@@ -150,7 +156,11 @@ export default function Alerts() {
           </div>
         )}
 
-        {!isLoading && !error && alerts.length > 0 && (
+        {!isLoading && !error && alerts.length > 0 && filteredAlerts.length === 0 && (
+          <p className="p-8 text-center text-pastel-sub text-[13.5px]">No alerts found</p>
+        )}
+
+        {!isLoading && !error && filteredAlerts.length > 0 && (
           <table className="data-table">
             <thead>
               <tr>
@@ -163,7 +173,7 @@ export default function Alerts() {
               </tr>
             </thead>
             <tbody>
-              {alerts.map((a) => {
+              {filteredAlerts.map((a) => {
                 const statusLc = a.status?.toLowerCase() || 'active';
                 const tone = STATUS_TONE[statusLc] || 'watch';
                 const createdDate = new Date(a.created_at);
