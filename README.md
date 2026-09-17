@@ -32,19 +32,28 @@ docker compose exec api pytest
 
 ### Test Database Configuration & Isolation
 
-- **Connection**: Tests run against the database URL configured in the `DATABASE_URL`
-  environment variable inside the container (defaulting to the shared `silentsepsis` database).
-- **Schema Migration**: On session start, `alembic` migrations are automatically executed
-  via a session-scoped fixture to ensure the schema is up-to-date with `head`.
-- **Data Isolation**: Since tests share the database, data isolation between tests is
-  maintained by table-cleaning fixtures (e.g. `clean_data` or `clean_users` with
-  `autouse=True`) in each test file. These fixtures perform `DELETE` queries on all model
-  tables before and after each test run.
-- **Environment Variables**:
-  - `DATABASE_URL`: Connection string for PostgreSQL database.
-  - `REDIS_URL`: Connection string for Redis instance.
-  - `BOOTSTRAP_SECRET`: Secret header key for admin bootstrapping.
-  - `ENABLE_METRICS`: Set to `true` to enable the `/metrics` endpoint.
+Tests run against `silentsepsis_test`, never `silentsepsis`. The safety guard in
+`app/tests/conftest.py` refuses to start pytest unless `TEST_DATABASE_URL` names
+a database ending in `_test`. Alembic migrations run against that same URL.
+
+The Docker Compose Postgres service hosts both databases on one Postgres instance.
+On a fresh volume, `docker/postgres/init-test-db.sql` creates `silentsepsis_test`
+automatically. If the existing `postgres_data` volume predates this script, create
+the database once with:
+
+```bash
+docker compose exec db psql -U postgres -d postgres -c "CREATE DATABASE silentsepsis_test;"
+```
+
+Then run migrations and tests in the API container:
+
+```bash
+docker compose exec -e DATABASE_URL=postgresql://postgres:postgres@db:5432/silentsepsis_test api alembic upgrade head
+docker compose exec api pytest
+```
+
+`DATABASE_URL` remains the application database connection. `TEST_DATABASE_URL` is
+the test-only connection and must never point to `silentsepsis`.
 
 ---
 

@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    test_database_url: str = "postgresql://postgres:postgres@db:5432/silentsepsis_test"
     database_url: str = "postgresql://postgres:postgres@db:5432/silentsepsis"
     database_pool_size: int = 5
     database_max_overflow: int = 10
