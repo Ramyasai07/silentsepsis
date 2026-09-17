@@ -3,15 +3,16 @@ import { TrendingUp, Clock } from 'lucide-react';
 import { ClinicSidebar } from '../components/clinic/ClinicSidebar';
 import { ClinicTopbar } from '../components/clinic/ClinicTopbar';
 import { PatientDetailDrawer } from '../components/clinic/PatientDetailDrawer';
-import { commandPatients } from '../data/commandPatients';
 import { scorePatients } from '../lib/priorityScore';
+import { useClinicalPatients } from '../hooks/useClinicalPatients';
 
 const STATUS_TEXT = { critical: 'text-pastel-pink', warning: 'text-pastel-amber', stable: 'text-pastel-teal' };
 const RANK_BG = ['bg-pastel-pink', 'bg-pastel-amber', 'bg-pastel-brand'];
 
 export default function PriorityWatchlist() {
   const [selectedId, setSelectedId] = useState(null);
-  const ranked = useMemo(() => scorePatients(commandPatients), []);
+  const { data: patients = [], isLoading, error } = useClinicalPatients();
+  const ranked = useMemo(() => scorePatients(patients), [patients]);
   const selectedPatient = ranked.find((p) => p.id === selectedId);
 
   return (
@@ -25,10 +26,13 @@ export default function PriorityWatchlist() {
             Patients most likely to deteriorate within the next 6 hours
           </p>
           <p className="text-[11px] text-pastel-sub dark:text-pastel-subDark mb-5">
-            Ranked by a weighted score: 40% current risk, 30% trend acceleration, 15% model certainty, 15% time since last observation — not simply sorted by current risk.
+            Ranked by backend risk, observed vital trend acceleration, and time since last observation. Model certainty is included only when the backend provides it.
           </p>
 
           <div className="space-y-3">
+            {isLoading && <p className="text-[13px] text-pastel-sub">Loading patients…</p>}
+            {error && <p className="text-[13px] text-red-600">Unable to load patients: {error.message}</p>}
+            {!isLoading && !error && ranked.length === 0 && <p className="text-[13px] text-pastel-sub">No patients returned by the backend.</p>}
             {ranked.map((p, i) => (
               <button
                 key={p.id}
@@ -44,7 +48,7 @@ export default function PriorityWatchlist() {
                       <p className="text-[14px] font-semibold text-pastel-ink dark:text-pastel-inkDark">{p.name} <span className="text-[12px] font-normal text-pastel-sub dark:text-pastel-subDark">{p.room}</span></p>
                       <div className="flex items-center gap-3 text-right shrink-0">
                         <div>
-                          <p className={`text-[15px] font-mono font-bold ${STATUS_TEXT[p.status]}`}>{p.risk} → {p.projectedRisk}</p>
+                          <p className={`text-[15px] font-mono font-bold ${STATUS_TEXT[p.status] || 'text-pastel-sub'}`}>{p.risk ?? '—'} → {p.projectedRisk ?? '—'}</p>
                           <p className="text-[10px] text-pastel-sub dark:text-pastel-subDark">current → projected</p>
                         </div>
                       </div>
@@ -59,7 +63,7 @@ export default function PriorityWatchlist() {
                           <Clock size={12} aria-hidden="true" /> {p.timeToIntervention}
                         </span>
                       )}
-                      <span className="text-[11px] text-pastel-sub dark:text-pastel-subDark">Confidence {p.certainty}%</span>
+                      <span className="text-[11px] text-pastel-sub dark:text-pastel-subDark">Confidence unavailable</span>
                     </div>
                   </div>
                 </div>

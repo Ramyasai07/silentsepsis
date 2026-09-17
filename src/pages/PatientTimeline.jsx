@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ArrowUpRight } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { ClinicSidebar } from '../components/clinic/ClinicSidebar';
 import { ClinicTopbar } from '../components/clinic/ClinicTopbar';
-import { commandPatients } from '../data/commandPatients';
-import { buildTimeline, TIMELINE_TYPE_META } from '../lib/buildTimeline';
+import { buildTimeline } from '../lib/buildTimeline';
 import { useAppStore } from '../store/useAppStore';
+import { useClinicalPatients } from '../hooks/useClinicalPatients';
 
 const FILTERS = [
   { key: 'all', label: 'All' },
@@ -22,15 +22,18 @@ function timeAgo(date) {
 }
 
 export default function PatientTimeline() {
-  const [patientId, setPatientId] = useState(commandPatients[0].id);
+  const { data: patients = [], isLoading, error } = useClinicalPatients();
+  const [patientId, setPatientId] = useState(null);
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const auditLog = useAppStore((s) => s.auditLog);
-  const escalate = useAppStore((s) => s.escalate);
+  useEffect(() => {
+    if (!patientId && patients.length > 0) setPatientId(patients[0].id);
+  }, [patientId, patients]);
 
-  const patient = commandPatients.find((p) => p.id === patientId);
-  const events = useMemo(() => buildTimeline(patient, auditLog), [patient, auditLog]);
+  const patient = patients.find((p) => p.id === patientId);
+  const events = useMemo(() => patient ? buildTimeline(patient, auditLog) : [], [patient, auditLog]);
 
   const filtered = events.filter((e) => {
     const matchesFilter =
@@ -56,7 +59,7 @@ export default function PatientTimeline() {
               onChange={(e) => setPatientId(e.target.value)}
               className="h-9 px-3 rounded-full bg-white dark:bg-pastel-cardDark border border-pastel-brandLight dark:border-pastel-borderDark text-[13px] text-pastel-ink dark:text-pastel-inkDark outline-none"
             >
-              {commandPatients.map((p) => (
+              {patients.map((p) => (
                 <option key={p.id} value={p.id}>{p.name} — {p.room}</option>
               ))}
             </select>
@@ -71,12 +74,7 @@ export default function PatientTimeline() {
               />
             </div>
 
-            <button
-              onClick={() => escalate(patient.id)}
-              className="h-9 px-3 rounded-full bg-pastel-amber text-white text-[12.5px] font-medium flex items-center gap-1.5 ml-auto"
-            >
-              <ArrowUpRight size={13} aria-hidden="true" /> Escalate now
-            </button>
+            <span className="text-[11px] text-pastel-sub dark:text-pastel-subDark ml-auto">Timeline uses backend vitals and local session actions.</span>
           </div>
 
           <div className="flex gap-1.5 mb-5">
@@ -93,6 +91,9 @@ export default function PatientTimeline() {
             ))}
           </div>
 
+          {isLoading && <p className="text-[13px] text-pastel-sub">Loading patients…</p>}
+          {error && <p className="text-[13px] text-red-600">Unable to load patients: {error.message}</p>}
+          {!isLoading && !error && !patient && <p className="text-[13px] text-pastel-sub">No patients returned by the backend.</p>}
           <div className="relative pl-6">
             <div className="absolute left-[9px] top-2 bottom-2 w-px bg-pastel-brandLight dark:bg-pastel-borderDark" aria-hidden="true" />
             <AnimatePresence initial={false}>

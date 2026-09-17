@@ -1,10 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { ZoomIn, ZoomOut, Search, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ClinicSidebar } from '../components/clinic/ClinicSidebar';
 import { ClinicTopbar } from '../components/clinic/ClinicTopbar';
 import { PatientDetailDrawer } from '../components/clinic/PatientDetailDrawer';
-import { wardFloors } from '../data/wardRooms';
+import { useClinicalPatients } from '../hooks/useClinicalPatients';
 
 // Design decision: reduce alarm fatigue. Only critical tiles are visually loud;
 // stable or watching patients should recede so the board does not compete
@@ -12,8 +12,8 @@ import { wardFloors } from '../data/wardRooms';
 const RISK_CRITICAL = 80; // >= this is critical (loud)
 const RISK_WATCHING = 50; // 50-79 is watching (calmer tint + border)
 
-const STATUS_COLOR = { critical: '#E24B4A', warning: '#EF9F27', watchingBorder: '#EF9F27', watchingFill: '#FAEEDA', watchingText: '#854F0B', stable: '#DDE3E3', empty: '#DDE3E3' };
-const STATUS_LABEL = { critical: 'Critical', warning: 'Watching', stable: 'Stable', empty: 'Unoccupied' };
+const STATUS_COLOR = { critical: '#E24B4A', warning: '#EF9F27', watchingBorder: '#EF9F27', watchingFill: '#FAEEDA', watchingText: '#854F0B', stable: '#DDE3E3', unassessed: '#DDE3E3', empty: '#DDE3E3' };
+const STATUS_LABEL = { critical: 'Critical', warning: 'Watching', stable: 'Stable', unassessed: 'Unassessed', empty: 'Unoccupied' };
 
 const PLAN_WIDTH = 720; // visual floor plan size used for pan constraints
 const PLAN_HEIGHT = 320;
@@ -44,8 +44,10 @@ function RoomTile({ entry, onSelect, dim }) {
   // - risk >= RISK_CRITICAL => critical (loud)
   // - RISK_WATCHING <= risk < RISK_CRITICAL => watching (calm tint + border)
   // - risk < RISK_WATCHING => stable (resembles empty)
-  const risk = entry.patient ? Number(entry.patient.risk ?? 0) : null;
-  const tier = entry.patient ? (risk >= RISK_CRITICAL ? 'critical' : risk >= RISK_WATCHING ? 'watching' : 'stable') : 'empty';
+  const risk = entry.patient?.risk;
+  const tier = entry.patient
+    ? (risk == null ? 'unassessed' : risk >= RISK_CRITICAL ? 'critical' : risk >= RISK_WATCHING ? 'watching' : 'stable')
+    : 'empty';
 
   // style building per tier
   const commonStyle = { opacity: dim ? 0.22 : 1 };
@@ -94,12 +96,12 @@ function RoomTile({ entry, onSelect, dim }) {
         style={{
           ...(tier === 'critical' ? criticalStyle : {}),
           ...(tier === 'watching' ? watchingStyle : {}),
-          ...(tier === 'stable' || tier === 'empty' ? { background: 'transparent' } : {}),
+          ...(tier === 'stable' || tier === 'unassessed' || tier === 'empty' ? { background: 'transparent' } : {}),
           ...(tier === 'stable' || tier === 'empty' ? { borderColor: undefined } : {}),
           ...(tier === 'stable' ? { borderColor: undefined } : {}),
           boxShadow: tier === 'stable' ? 'inset 0 2px 8px rgba(11,13,14,0.04)' : undefined,
-          ...(tier === 'stable' || tier === 'empty' ? { borderWidth: '1.5px' } : {}),
-          ...(tier === 'stable' || tier === 'empty' ? { borderColor: undefined } : {}),
+          ...(tier === 'stable' || tier === 'unassessed' || tier === 'empty' ? { borderWidth: '1.5px' } : {}),
+          ...(tier === 'stable' || tier === 'unassessed' || tier === 'empty' ? { borderColor: undefined } : {}),
           ...commonStyle,
         }}
       >
@@ -138,15 +140,28 @@ function RoomTile({ entry, onSelect, dim }) {
 }
 
 export default function WardHeatmap() {
-  const [floorId, setFloorId] = useState('3');
+  const { data: patients = [], isLoading, error } = useClinicalPatients();
+  const floors = useMemo(() => {
+    const grouped = new Map();
+    patients.forEach((patient) => {
+      const id = patient.wardId || patient.ward || 'unassigned';
+      if (!grouped.has(id)) grouped.set(id, { id, label: patient.ward || 'Ward unavailable', rooms: [] });
+      grouped.get(id).rooms.push({ room: patient.room, patient });
+    });
+    return [...grouped.values()];
+  }, [patients]);
+  const [floorId, setFloorId] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const dragState = useRef(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
-  const floor = wardFloors.find((f) => f.id === floorId);
-  const allPatients = wardFloors.flatMap((f) => f.rooms.map((r) => r.patient).filter(Boolean));
+  useEffect(() => {
+    if (!floorId && floors.length > 0) setFloorId(floors[0].id);
+  }, [floorId, floors]);
+  const floor = floors.find((f) => f.id === floorId) || { rooms: [] };
+  const allPatients = patients;
   const selectedPatient = allPatients.find((p) => p.id === selectedId);
 
   function clamp(val, a, b) {
@@ -189,7 +204,7 @@ export default function WardHeatmap() {
 
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
             <div className="flex gap-1.5 border-b border-transparent">
-                {wardFloors.map((f) => (
+                {floors.map((f) => (
                   <button
                     key={f.id}
                     onClick={() => setFloorId(f.id)}
@@ -238,6 +253,9 @@ export default function WardHeatmap() {
               </span>
             ))}
           </div>
+          {isLoading && <p className="text-[13px] text-pastel-sub mb-4">Loading patients…</p>}
+          {error && <p className="text-[13px] text-red-600 mb-4">Unable to load patients: {error.message}</p>}
+          {!isLoading && !error && floors.length === 0 && <p className="text-[13px] text-pastel-sub mb-4">No ward or patient occupancy data returned by the backend.</p>}
 
           <div
             className="rounded-2xl bg-white dark:bg-pastel-cardDark border border-pastel-brandLight dark:border-pastel-borderDark p-8 overflow-hidden cursor-grab active:cursor-grabbing select-none"

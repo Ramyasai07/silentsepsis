@@ -4,8 +4,8 @@ import { useAppStore } from '../../store/useAppStore';
 import { DismissReasonModal } from './DismissReasonModal';
 import { VitalsEntryForm } from './VitalsEntryForm';
 
-const STATUS_TEXT = { critical: 'text-pastel-pink', warning: 'text-pastel-amber', stable: 'text-pastel-teal' };
-const STATUS_LABEL = { critical: 'Critical', warning: 'Watching', stable: 'Stable' };
+const STATUS_TEXT = { critical: 'text-pastel-pink', warning: 'text-pastel-amber', stable: 'text-pastel-teal', unassessed: 'text-pastel-sub' };
+const STATUS_LABEL = { critical: 'Critical', warning: 'Watching', stable: 'Stable', unassessed: 'Unassessed' };
 
 export function PatientDetailDrawer({ patient, onClose }) {
   const [showDismiss, setShowDismiss] = useState(false);
@@ -18,8 +18,6 @@ export function PatientDetailDrawer({ patient, onClose }) {
   const latest = patient.vitals[patient.vitals.length - 1];
   const isAcknowledged = acknowledgedIds.has(patient.id);
   const dismissInfo = dismissedIds.get(patient.id);
-  // Confidence interval derived from certainty: lower certainty, wider band.
-  const ciWidth = Math.max(2, Math.round((100 - patient.certainty) / 8));
 
   return (
     <>
@@ -39,13 +37,13 @@ export function PatientDetailDrawer({ patient, onClose }) {
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="rounded-xl bg-pastel-bg dark:bg-white/5 p-3">
               <p className="text-[10.5px] text-pastel-sub dark:text-pastel-subDark mb-1">Risk score</p>
-              <p className={`text-[19px] font-mono font-bold ${STATUS_TEXT[patient.status]}`}>{patient.risk}</p>
+              <p className={`text-[19px] font-mono font-bold ${STATUS_TEXT[patient.status]}`}>{patient.risk ?? '—'}</p>
               <p className="text-[10.5px] text-pastel-sub dark:text-pastel-subDark">{STATUS_LABEL[patient.status]}</p>
             </div>
             <div className="rounded-xl bg-pastel-bg dark:bg-white/5 p-3">
               <p className="text-[10.5px] text-pastel-sub dark:text-pastel-subDark mb-1">Model confidence</p>
-              <p className="text-[19px] font-mono font-bold text-pastel-ink dark:text-pastel-inkDark">{patient.certainty}%</p>
-              <p className="text-[10.5px] text-pastel-sub dark:text-pastel-subDark">±{ciWidth} margin</p>
+              <p className="text-[19px] font-mono font-bold text-pastel-ink dark:text-pastel-inkDark">—</p>
+              <p className="text-[10.5px] text-pastel-sub dark:text-pastel-subDark">Not provided by backend</p>
             </div>
           </div>
 
@@ -62,13 +60,13 @@ export function PatientDetailDrawer({ patient, onClose }) {
               <tbody className="text-pastel-ink dark:text-pastel-inkDark">
                 <tr className="border-t border-pastel-bg dark:border-pastel-borderDark">
                   <td className="py-1.5 px-3">Heart rate</td>
-                  <td className="text-right px-3 font-mono text-pastel-sub dark:text-pastel-subDark">{patient.baseline.hr}</td>
-                  <td className={`text-right px-3 font-mono font-medium ${latest.hr > patient.baseline.hr + 10 ? STATUS_TEXT[patient.status] : ''}`}>{latest.hr}</td>
+                  <td className="text-right px-3 font-mono text-pastel-sub dark:text-pastel-subDark">—</td>
+                  <td className="text-right px-3 font-mono font-medium">{latest?.hr ?? '—'}</td>
                 </tr>
                 <tr className="border-t border-pastel-bg dark:border-pastel-borderDark">
                   <td className="py-1.5 px-3">Resp. rate</td>
-                  <td className="text-right px-3 font-mono text-pastel-sub dark:text-pastel-subDark">{patient.baseline.rr}</td>
-                  <td className={`text-right px-3 font-mono font-medium ${latest.rr > patient.baseline.rr + 4 ? STATUS_TEXT[patient.status] : ''}`}>{latest.rr}</td>
+                  <td className="text-right px-3 font-mono text-pastel-sub dark:text-pastel-subDark">—</td>
+                  <td className="text-right px-3 font-mono font-medium">{latest?.rr ?? '—'}</td>
                 </tr>
               </tbody>
             </table>

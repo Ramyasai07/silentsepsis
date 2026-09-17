@@ -1,29 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, ShieldCheck } from 'lucide-react';
-import { commandPatients } from '../../data/commandPatients';
-
-// IMPORTANT constraint: every response here is assembled from a patient's
-// actual computed fields (risk, features, certainty, explanation) — never
-// free-generated text. This is a deterministic lookup over real model
-// output, not an LLM chatbot. That distinction is the whole point: the
-// project's own design doc explicitly rules out a chatbot layer because
-// hallucination risk in a clinical context outweighs the convenience.
-// This widget answers "what does the model say about X", nothing more.
-
-function findPatient(query) {
-  const q = query.toLowerCase();
-  return commandPatients.find(
-    (p) => p.name.toLowerCase().includes(q) || p.room.toLowerCase().includes(q) || p.name.toLowerCase().split(' ').some((part) => part.replace('.', '') === q.replace('.', ''))
-  );
-}
 
 function buildAnswer(patient) {
   const top = patient.features[0];
   const lines = [
-    `${patient.name}, room ${patient.room} — risk score ${patient.risk}/100 (${patient.status}), model certainty ${patient.certainty}%.`,
+    `${patient.name}, room ${patient.room} - risk score ${patient.risk ?? 'unavailable'}/100 (${patient.status}).`,
   ];
   if (top) {
-    lines.push(`Strongest contributing factor: ${top.name.toLowerCase()} at ${top.contribution}%.`);
+    lines.push(`Strongest contributing factor: ${top.name.toLowerCase()} at ${top.contribution}.`);
   }
   lines.push(patient.explanation);
   if (patient.timeToIntervention) {
@@ -32,12 +16,12 @@ function buildAnswer(patient) {
   return lines.join(' ');
 }
 
-const NOT_FOUND = "I can only answer using data the model has actually computed for a monitored patient — I couldn't match that to anyone on the ward. Try a name or room number, like 'Patel' or '304B'.";
+const NOT_FOUND = "I can only answer using data the model has actually computed for a monitored patient. I couldn't match that to anyone on the ward. Try a name or room number from the current list.";
 
-export function ChatWidget() {
+export function ChatWidget({ patients = [] }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: 'Ask me about any monitored patient by name or room — I\'ll read back exactly what the model has flagged, nothing more.' },
+    { role: 'assistant', text: 'Ask me about any monitored patient by name or room. I will read back exactly what the model has flagged, nothing more.' },
   ]);
   const [input, setInput] = useState('');
   const scrollRef = useRef(null);
@@ -45,6 +29,13 @@ export function ChatWidget() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
+
+  function findPatient(query) {
+    const q = query.toLowerCase();
+    return patients.find((p) =>
+      p.name.toLowerCase().includes(q) || p.room.toLowerCase().includes(q)
+    );
+  }
 
   function ask(query) {
     const text = query.trim();
@@ -72,7 +63,7 @@ export function ChatWidget() {
           </div>
 
           <p className="px-4 pt-2.5 pb-1.5 text-[10.5px] text-pastel-sub dark:text-pastel-subDark leading-snug border-b border-pastel-bg dark:border-pastel-borderDark">
-            Answers are read directly from monitored data — not free-form AI generation.
+            Answers are read directly from monitored data - not free-form AI generation.
           </p>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-3.5 py-3 space-y-2.5">
@@ -92,7 +83,7 @@ export function ChatWidget() {
           </div>
 
           <div className="flex gap-1.5 px-3 pb-2 flex-wrap">
-            {commandPatients.slice(0, 3).map((p) => (
+            {patients.slice(0, 3).map((p) => (
               <button
                 key={p.id}
                 onClick={() => ask(p.name)}
@@ -107,7 +98,7 @@ export function ChatWidget() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Name or room number…"
+              placeholder="Name or room number..."
               className="flex-1 h-9 px-3 rounded-full bg-pastel-bg dark:bg-white/5 text-[12.5px] text-pastel-ink dark:text-pastel-inkDark outline-none placeholder:text-pastel-sub/70"
             />
             <button

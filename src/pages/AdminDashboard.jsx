@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Topbar from '../components/Topbar';
-import { precisionRecallHistory, wardStaffResponse, auditLog } from '../data/mockData';
 import { ApiError, NetworkError } from '../api/client';
 import { getAuditLog, getAuditLogs } from '../api/auditLogs';
 import { createUser } from '../api/auth';
 import { createWard } from '../api/wards';
+import { getPrecisionRecallHistory, getStaffResponseByWard } from '../api/analytics';
 import { useAuth } from '../context/AuthContext';
 
 const EMPTY_USER = {
@@ -48,11 +48,11 @@ export default function AdminDashboard() {
   const [wardForm, setWardForm] = useState(EMPTY_WARD);
   const [creatingWard, setCreatingWard] = useState(false);
   const [wardMessage, setWardMessage] = useState(null);
+  const [precisionRecall, setPrecisionRecall] = useState([]);
+  const [staffResponse, setStaffResponse] = useState([]);
+  const [metricsError, setMetricsError] = useState(null);
 
   const normalizedQuery = query.toLowerCase();
-  const filteredAuditLog = auditLog.filter((entry) =>
-    entry.event.toLowerCase().includes(normalizedQuery) || entry.actor.toLowerCase().includes(normalizedQuery)
-  );
   const filteredLogs = logs.filter((entry) =>
     [entry.action, entry.entity, entry.entity_id, entry.user_id]
       .some((value) => String(value ?? '').toLowerCase().includes(normalizedQuery))
@@ -73,6 +73,15 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (user?.role?.toLowerCase() === 'admin') {
       loadLogs();
+      Promise.all([
+        getPrecisionRecallHistory({ days: 30, bucket_size_days: 5 }),
+        getStaffResponseByWard({ days: 30 }),
+      ]).then(([history, response]) => {
+        setPrecisionRecall(history || []);
+        setStaffResponse(response || []);
+      }).catch((error) => {
+        setMetricsError(errorMessage(error, 'Unable to load analytics'));
+      });
     }
   }, [user?.role]);
 
@@ -149,11 +158,11 @@ export default function AdminDashboard() {
       <div className="stat-grid">
         <div className="stat-card">
           <p className="stat-label">Alert precision</p>
-          <p className="stat-value stable">78<span className="stat-unit">%</span></p>
+          <p className="stat-value stable">{precisionRecall.at(-1)?.precision ?? '—'}<span className="stat-unit">%</span></p>
         </div>
         <div className="stat-card">
           <p className="stat-label">Alert recall</p>
-          <p className="stat-value stable">91<span className="stat-unit">%</span></p>
+          <p className="stat-value stable">{precisionRecall.at(-1)?.recall ?? '—'}<span className="stat-unit">%</span></p>
         </div>
         <div className="stat-card">
           <p className="stat-label">Model drift</p>
@@ -169,7 +178,8 @@ export default function AdminDashboard() {
         <p className="panel-title">Precision and recall over time</p>
         <div style={{ height: 220 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={precisionRecallHistory}>
+            {metricsError && <p className="text-sm text-red-600">{metricsError}</p>}
+            <LineChart data={precisionRecall}>
               <CartesianGrid stroke="var(--line)" strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="day" tick={{ fill: 'var(--text-dim)', fontSize: 11 }} axisLine={{ stroke: 'var(--line)' }} tickLine={false} />
               <YAxis tick={{ fill: 'var(--text-dim)', fontSize: 11 }} axisLine={false} tickLine={false} domain={[50, 100]} />
@@ -227,7 +237,8 @@ export default function AdminDashboard() {
 
         <div className="panel">
           <p className="panel-title">Staff response by ward</p>
-          {wardStaffResponse.map((w) => (
+          {staffResponse.length === 0 && !metricsError && <p className="text-sm text-dim">No alert response data returned.</p>}
+          {staffResponse.map((w) => (
             <div key={w.ward} className="flex justify-between items-center" style={{ padding: '10px 0', borderBottom: '1px solid var(--line)' }}>
               <span style={{ fontSize: 13 }}>{w.ward}</span>
               <span className="mono text-sm" style={{ color: w.reviewed < 80 ? 'var(--trace-watch)' : 'var(--text-secondary)' }}>
@@ -267,11 +278,11 @@ export default function AdminDashboard() {
         </div>
         <div className="panel">
           <p className="panel-title">Recent audit entries</p>
-          {filteredAuditLog.length === 0 && <p className="p-4 text-center text-dim text-sm">No entries found</p>}
-          {filteredAuditLog.map((entry, i) => (
-            <div key={i} style={{ padding: '10px 0', borderBottom: i < auditLog.length - 1 ? '1px solid var(--line)' : 'none' }}>
-              <p style={{ fontSize: 12.5, margin: 0, color: 'var(--text-primary)' }}>{entry.event}</p>
-              <p className="patient-meta text-dim">{entry.actor} · {entry.time}</p>
+          {filteredLogs.length === 0 && <p className="p-4 text-center text-dim text-sm">No entries found</p>}
+          {filteredLogs.slice(0, 5).map((entry) => (
+            <div key={entry.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--line)' }}>
+              <p style={{ fontSize: 12.5, margin: 0, color: 'var(--text-primary)' }}>{formatAction(entry.action)} · {entry.entity}</p>
+              <p className="patient-meta text-dim">{entry.user_id ?? '—'} · {formatDate(entry.created_at)}</p>
             </div>
           ))}
         </div>
@@ -350,17 +361,17 @@ export default function AdminDashboard() {
               </button>
             </div>
             <div>
-              {auditLog.map((entry, index) => (
+              {logs.map((entry) => (
                 <div
-                  key={`${entry.time}-${index}`}
+                  key={entry.id}
                   className="flex justify-between items-start gap-6"
                   style={{ padding: '12px 0', borderTop: '1px solid var(--line)' }}
                 >
                   <div>
-                    <p style={{ fontSize: 13, margin: 0, color: 'var(--text-primary)' }}>{entry.event}</p>
-                    <p className="patient-meta" style={{ marginTop: 4 }}>{entry.actor}</p>
+                    <p style={{ fontSize: 13, margin: 0, color: 'var(--text-primary)' }}>{formatAction(entry.action)} · {entry.entity}</p>
+                    <p className="patient-meta" style={{ marginTop: 4 }}>{entry.user_id ?? '—'}</p>
                   </div>
-                  <span className="mono text-dim" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{entry.time}</span>
+                  <span className="mono text-dim" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{formatDate(entry.created_at)}</span>
                 </div>
               ))}
             </div>

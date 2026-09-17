@@ -3,8 +3,6 @@ import { Search, Grid3x3, Moon, Sun, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { NotificationBell } from './NotificationBell';
-import { downloadWardReport } from '../../lib/downloadReport';
-import { commandPatients } from '../../data/commandPatients';
 import { useAuth } from '../../context/AuthContext';
 
 export function ClinicTopbar({ onSearchChange }) {
@@ -15,8 +13,8 @@ export function ClinicTopbar({ onSearchChange }) {
   const [openPanel, setOpenPanel] = useState(null);
   const [query, setQuery] = useState('');
   const panelRef = useRef(null);
-  const displayName = user?.name || 'N. Thomas';
-  const displayRole = user?.role || 'Ward nurse';
+  const displayName = user?.full_name || user?.name || user?.email || 'Signed-in user';
+  const displayRole = user?.role || 'Role unavailable';
   const initials = displayName
     .split(' ')
     .filter(Boolean)
@@ -93,10 +91,10 @@ export function ClinicTopbar({ onSearchChange }) {
           )}
         </div>
         <button
-          onClick={() => downloadWardReport(commandPatients)}
-          className="h-9 w-9 rounded-full bg-white dark:bg-pastel-cardDark border border-pastel-brandLight dark:border-pastel-borderDark flex items-center justify-center text-pastel-sub dark:text-pastel-subDark hover:text-pastel-ink dark:hover:text-pastel-inkDark transition-colors"
-          aria-label="Download ward report"
-          title="Download ward report"
+          disabled
+          className="h-9 w-9 rounded-full bg-white dark:bg-pastel-cardDark border border-pastel-brandLight dark:border-pastel-borderDark flex items-center justify-center text-pastel-sub/45 dark:text-pastel-subDark/45 cursor-not-allowed"
+          aria-label="Ward report export unavailable"
+          title="Ward report export unavailable"
         >
           <Download size={16} aria-hidden="true" />
         </button>

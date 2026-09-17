@@ -5,7 +5,7 @@
 //
 // score = 0.40 * currentRisk
 //       + 0.30 * accelerationScore   (is the trend getting worse, faster?)
-//       + 0.15 * certainty           (how sure is the model of this read?)
+//       + optional certainty         (included only if backend provides it)
 //       + 0.15 * stalenessScore      (how long since we last saw data?)
 
 function computeAcceleration(vitals) {
@@ -35,15 +35,22 @@ export function scorePatients(patients) {
       const hoursSinceObserved = parseHoursAgo(p.lastVitals);
       const stalenessScore = Math.min(100, hoursSinceObserved * 15); // longer gap = higher priority to recheck
 
-      const priorityScore =
-        0.4 * p.risk +
-        0.3 * accelerationScore +
-        0.15 * p.certainty +
-        0.15 * stalenessScore;
+      const signals = [
+        [p.risk, 0.4],
+        [accelerationScore, 0.3],
+        [p.certainty, 0.15],
+        [stalenessScore, 0.15],
+      ].filter(([value]) => value != null);
+      const weightTotal = signals.reduce((sum, [, weight]) => sum + weight, 0);
+      const priorityScore = weightTotal
+        ? signals.reduce((sum, [value, weight]) => sum + value * weight, 0) / weightTotal
+        : 0;
 
       // Simple linear projection: current risk plus acceleration trend
       // extrapolated 3 intervals forward, clamped to [0, 100].
-      const projectedRisk = Math.max(0, Math.min(100, Math.round(p.risk + acceleration * 3)));
+      const projectedRisk = p.risk == null
+        ? null
+        : Math.max(0, Math.min(100, Math.round(p.risk + acceleration * 3)));
 
       const explanation = buildExplanation(p, acceleration, hoursSinceObserved);
 
@@ -64,6 +71,6 @@ function buildExplanation(p, acceleration, hoursSinceObserved) {
   if (hoursSinceObserved > 1) {
     parts.push(`last observed ${hoursSinceObserved.toFixed(1)}h ago, longer than ideal for this risk tier`);
   }
-  parts.push(`model certainty ${p.certainty}%`);
+  if (p.certainty != null) parts.push(`model certainty ${p.certainty}%`);
   return parts.join('; ') + '.';
 }

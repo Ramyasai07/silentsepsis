@@ -13,7 +13,7 @@ function useLiveClock() {
   return now;
 }
 
-export default function Topbar({ title, subtitle, alertCount = 0, user = { initials: 'NT', name: 'N. Thomas, RN' }, onSearchChange, searchPlaceholder = 'Search current page…' }) {
+export default function Topbar({ title, subtitle, alertCount = 0, user, onSearchChange, searchPlaceholder = 'Search current page…' }) {
   const now = useLiveClock();
   const { user: authUser, logout } = useAuth();
   const [query, setQuery] = useState('');
@@ -21,7 +21,7 @@ export default function Topbar({ title, subtitle, alertCount = 0, user = { initi
   const profileRef = useRef(null);
   const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const profile = authUser || user;
-  const displayName = profile?.name || profile?.full_name || 'N. Thomas, RN';
+  const displayName = profile?.full_name || profile?.name || profile?.email || 'Signed-in user';
   const initials = displayName
     .split(' ')
     .filter(Boolean)

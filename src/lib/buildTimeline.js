@@ -20,6 +20,11 @@ function hoursLabelToDate(label) {
   // actual Date for sorting/display purposes only.
   const now = new Date();
   if (label === 'now') return now;
+  if (label instanceof Date) return label;
+  if (typeof label === 'string' && !/^\d+(?:\.\d+)?h$/.test(label) && label !== 'now') {
+    const parsed = new Date(label);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
   const hours = parseFloat(label);
   return new Date(now.getTime() - hours * 3600 * 1000);
 }
@@ -29,9 +34,9 @@ export function buildTimeline(patient, auditLog) {
 
   patient.vitals.forEach((v) => {
     events.push({
-      id: `vitals-${v.time}`,
+      id: `vitals-${v.recordedAt || v.time}`,
       type: 'vitals',
-      time: hoursLabelToDate(v.time),
+      time: hoursLabelToDate(v.recordedAt || v.time),
       detail: `HR ${v.hr} bpm, RR ${v.rr} /min`,
     });
   });

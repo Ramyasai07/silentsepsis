@@ -35,7 +35,7 @@ export function PatientTodayList({ patients, onSelect, selectedId }) {
               <p className="text-[11.5px] text-pastel-sub dark:text-pastel-subDark truncate">{p.room} · {p.explanation}</p>
             </div>
             <span className={`text-[10.5px] font-semibold px-2 py-1 rounded-full shrink-0 ${STATUS_CHIP[p.status]}`}>
-              {STATUS_LABEL[p.status]}
+              {STATUS_LABEL[p.status] || 'Unassessed'}
             </span>
           </button>
         ))}

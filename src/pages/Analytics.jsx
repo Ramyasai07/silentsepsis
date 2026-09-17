@@ -17,8 +17,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { NetworkError, ApiError } from '../api/client';
-import { commandPatients } from '../data/commandPatients';
-import { downloadWardReport } from '../lib/downloadReport';
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
 
@@ -324,7 +322,7 @@ export default function Analytics() {
       </div>
 
       <div className="flex gap-8 mt-24">
-        <button className="btn" onClick={() => downloadWardReport(commandPatients)}>
+        <button className="btn" disabled title="PDF report export unavailable">
           <i className="ti ti-download" aria-hidden="true" /> Export PDF report
         </button>
         <button className="btn ghost" onClick={exportCsv}>
