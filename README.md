@@ -48,6 +48,14 @@ docker compose exec api pytest
 
 ---
 
+## Academic prototype notice
+
+This project is an academic/portfolio prototype and is not validated for clinical use. Risk-tier thresholds, model scores, and alert logic are exploratory and should not be treated as clinically validated recommendations for patient care or medical decision-making.
+
+The calibrated machine-learning predictor uses statistically informed operating boundaries based on its held-out calibrated-probability distribution and F1-optimal threshold. The 0.20 HIGH/CRITICAL boundary is an operational separation for this model artifact. These boundaries are not clinically validated cutpoints.
+
+---
+
 ## Infrastructure Endpoints
 
 | Endpoint | Auth | Description |

@@ -3,10 +3,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-RISK_SCORE_LOW_MAX = 0.3
-RISK_SCORE_MODERATE_MAX = 0.5
-RISK_SCORE_HIGH_MAX = 0.7
-
 RISK_TIER_LOW = "LOW"
 RISK_TIER_MODERATE = "MODERATE"
 RISK_TIER_HIGH = "HIGH"

@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 from app.ml.base import (
-    RISK_SCORE_HIGH_MAX,
-    RISK_SCORE_LOW_MAX,
-    RISK_SCORE_MODERATE_MAX,
     RISK_TIER_CRITICAL,
     RISK_TIER_HIGH,
     RISK_TIER_LOW,
@@ -36,6 +33,10 @@ MAX_RISK_SCORE = (
     + SYSTOLIC_BP_WEIGHT
     + DIASTOLIC_BP_WEIGHT
 )
+
+RISK_SCORE_LOW_MAX = 0.3
+RISK_SCORE_MODERATE_MAX = 0.5
+RISK_SCORE_HIGH_MAX = 0.7
 
 
 def _mean(range_tuple: tuple[float, float]) -> float:

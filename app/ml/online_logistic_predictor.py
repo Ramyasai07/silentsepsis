@@ -8,9 +8,6 @@ import numpy as np
 import pandas as pd
 
 from app.ml.base import (
-    RISK_SCORE_HIGH_MAX,
-    RISK_SCORE_LOW_MAX,
-    RISK_SCORE_MODERATE_MAX,
     RISK_TIER_CRITICAL,
     RISK_TIER_HIGH,
     RISK_TIER_LOW,
@@ -25,6 +22,10 @@ from app.models.vital_reading import VitalReading
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ARTIFACT_ROOT = PROJECT_ROOT / "ai" / "artifacts" / "online-logistic-v1-calibrated"
+
+ML_RISK_SCORE_LOW_MAX = 0.015
+ML_RISK_SCORE_MODERATE_MAX = 0.03150491842443488
+ML_RISK_SCORE_HIGH_MAX = 0.20
 
 MODEL_PATH = ARTIFACT_ROOT / "model.joblib"
 IMPUTER_PATH = ARTIFACT_ROOT / "imputer.joblib"
@@ -161,11 +162,11 @@ class OnlineLogisticPredictor(RiskPredictor):
             np.clip(calibrated_probability + baseline_adjustment, 0.0, 1.0)
         )
 
-        if calibrated_probability < RISK_SCORE_LOW_MAX:
+        if calibrated_probability < ML_RISK_SCORE_LOW_MAX:
             risk_tier = RISK_TIER_LOW
-        elif calibrated_probability < RISK_SCORE_MODERATE_MAX:
+        elif calibrated_probability < ML_RISK_SCORE_MODERATE_MAX:
             risk_tier = RISK_TIER_MODERATE
-        elif calibrated_probability < RISK_SCORE_HIGH_MAX:
+        elif calibrated_probability < ML_RISK_SCORE_HIGH_MAX:
             risk_tier = RISK_TIER_HIGH
         else:
             risk_tier = RISK_TIER_CRITICAL
